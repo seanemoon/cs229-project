@@ -1,6 +1,6 @@
 import abc
 
-class AbstractWebcamMetadataScraper(object):
+class Scraper(object, metaclass=abc.ABCMeta):
   """An abstract interface for scraping metadata from webcams."""
   __metaclass__ = abc.ABCMeta
 

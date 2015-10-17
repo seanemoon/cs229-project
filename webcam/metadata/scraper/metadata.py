@@ -1,4 +1,4 @@
-class WebcamMetadata(object):
+class Metadata(object):
   """A data class used to store webcam metadata.
 
   Attributes:
@@ -40,17 +40,17 @@ class WebcamMetadata(object):
     Args:
       metadata (dict): Mapping from attribute names to values.
     """
-    for attr in WebcamMetadata._SUPPORTED_ATTRIBUTES:
+    for attr in Metadata._SUPPORTED_ATTRIBUTES:
       setattr(self, attr, metadata.get(attr))
 
 
   def __str__(self):
     """The string representation of this metadata.
 
-    Used for printing WebcamMetadata objects.
+    Used for printing Metadata objects.
     """
     metadata = {}
-    for attr in WebcamMetadata._SUPPORTED_ATTRIBUTES:
+    for attr in Metadata._SUPPORTED_ATTRIBUTES:
       value = getattr(self, attr, None)
       if value is not None:
         metadata[attr] = value

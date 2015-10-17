@@ -1,31 +1,40 @@
-class WebcamMetadataManager(object):
+import pickle
+import io
+
+class Manager(object):
   """Manages webcam metadata.
 
   Supports iteratation on persisted metadata.
 
   Also supports querying and automatic persistance of metadata from sources
-  which implement AbstractWebcamMetadataScraper.
+  which implement scraper.abstract.AbstractScraper.
 
   Usage Example:
-    metadata_manager = WebcamMetadataManager(database_file)
+    metadata_manager = webcam.metadata.Manager(database_file)
 
     for webcam_metadata in metadata_manager:
       ...
 
-    metadata_manager.set_scraper(WebcamMetadataScraper)
+    metadata_manager.set_scraper(scraper.opentopia.Scraper)
     metadata = metadata_manager.get('11232')
   """
-
-
-  def __init__(self, database_file):
-    """Initializes a WebcamMetadataManager object
+  def __init__(self, metadata_path):
+    """Initializes a Manager object
 
     Args:
-      database_file (string): The path to the database file backing this manager.
+      metadata_path (string): The path to the pickled metadata.
     """
-    self._database_file = database_file
-    # TODO(seanrafferty): rehydrate this from the database.
-    self._metadata = {}
+    self._metadata_path = metadata_path
+    try:
+      self._metadata = pickle.load(io.open(self._metadata_path, 'rb'))
+    except FileNotFoundError:
+      self._metadata = {}
+    self._metadata_is_dirty = False
+
+
+  def __del__(self):
+    """Called when the Manager is deleted."""
+    self._persist_metadata()
 
 
   def get(self, identifier, source=None):
@@ -66,7 +75,7 @@ class WebcamMetadataManager(object):
     The scraper is only used when querying for metadata.
 
     Args:
-      scraper (WebcamMetadataScraper): The scraper to use.
+      scraper (scraper.abstract.Scraper): The scraper to use.
     """
     self._scraper = scraper
 
@@ -75,8 +84,17 @@ class WebcamMetadataManager(object):
     """Adds the metadata to the manager.
 
     Args:
-      metadata (WebcamMetadata): The metadata to add.
+      metadata (scraper.metadata.Metadata): The metadata to add.
     """
     key = (metadata.source, metadata.identifier)
     self._metadata[key] = metadata
-    # TODO(seanrafferty): Persist.
+    self_metadata_is_dirty = True
+
+  def _persist_metadata(self):
+    """Persists the metadata.
+
+    Pickles the metadata and saves it to the metadata path.
+    """
+    if self._metadata_is_dirty:
+      pickle.dump(self._metadata, io.open(self._metadata_path, 'wb'))
+      self._metadata_is_dirty = False

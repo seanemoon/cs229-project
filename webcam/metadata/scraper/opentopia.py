@@ -1,5 +1,5 @@
-from abstract_webcam_metadata_scraper import AbstractWebcamMetadataScraper
-from webcam_metadata import WebcamMetadata
+from . import abstract
+from . import metadata
 
 from lxml import html
 import logging
@@ -8,7 +8,7 @@ import urllib.parse
 import urllib.request
 
 
-class WebcamMetadataScraper(AbstractWebcamMetadataScraper):
+class Scraper(abstract.Scraper):
   """Scrapes metadata from webcams on Opentopia"""
 
 
@@ -20,20 +20,20 @@ class WebcamMetadataScraper(AbstractWebcamMetadataScraper):
       identifier (str): A unique identifier for the webcam.
 
     Returns:
-      WebcamMetadata: Metadata for the webcam.
+      metadata.Metadata: Metadata for the webcam.
     """
     try:
       response = urllib.request.urlopen(
-          WebcamMetadataScraper.construct_request(identifier))
-      metadata = WebcamMetadataScraper.extract_metadata(response.read())
+          Scraper.construct_request(identifier))
+      m = Scraper.extract_metadata(response.read())
     except urllib.error.URLError as error:
       logger = logging.getLogger('opentopia_webcam_metadata_scraper')
       logger.error('failed to scrape metadata for %s.' % identifier)
-      metadata = WebcamMetadata({'is_live': False})
+      m = metadata.Metadata({'is_live': False})
 
-    metadata.identifier = identifier
-    metadata.source = WebcamMetadataScraper.source()
-    return metadata
+    m.identifier = identifier
+    m.source = Scraper.source()
+    return m
 
 
   @staticmethod
@@ -100,7 +100,7 @@ class WebcamMetadataScraper(AbstractWebcamMetadataScraper):
       page (bytes): An HTML page holding information about a webcam.
 
     Returns:
-      WebcamMetadata:  Metadata for the webcam.
+      metadata.Metadata:  Metadata for the webcam.
     """
     tree = html.fromstring(page)
     livestill_xpath = '//*[@id="stillimage"]'
@@ -109,7 +109,7 @@ class WebcamMetadataScraper(AbstractWebcamMetadataScraper):
     caminfo_elems = tree.xpath(caminfo_xpath)
 
     if caminfo_elems:
-      caminfo = WebcamMetadataScraper.parse_caminfo_elem(caminfo_elems[0])
+      caminfo = Scraper.parse_caminfo_elem(caminfo_elems[0])
     else:
       caminfo = []
 
@@ -118,10 +118,10 @@ class WebcamMetadataScraper(AbstractWebcamMetadataScraper):
     else:
       livestill_url = ""
 
-    metadata = {}
+    m = {}
     for key, value in caminfo:
-      metadata[key] = value
-    metadata['livestill_url'] = livestill_url
-    metadata['is_live'] = livestill_url and b'trouble contacting' not in page
+      m[key] = value
+    m['livestill_url'] = livestill_url
+    m['is_live'] = livestill_url and b'trouble contacting' not in page
 
-    return WebcamMetadata(metadata)
+    return metadata.Metadata(m)
