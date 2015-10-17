@@ -88,7 +88,7 @@ class Manager(object):
     """
     key = (metadata.source, metadata.identifier)
     self._metadata[key] = metadata
-    self_metadata_is_dirty = True
+    self._metadata_is_dirty = True
 
   def _persist_metadata(self):
     """Persists the metadata.

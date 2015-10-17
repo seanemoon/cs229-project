@@ -2,8 +2,6 @@ import abc
 
 class Scraper(object, metaclass=abc.ABCMeta):
   """An abstract interface for scraping metadata from webcams."""
-  __metaclass__ = abc.ABCMeta
-
 
   @staticmethod
   @abc.abstractmethod
