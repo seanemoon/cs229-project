@@ -55,3 +55,12 @@ docs/_build/
 
 # PyBuilder
 target/
+
+
+# BEGIN: Custom Additions
+
+# Scraped webcam frames:
+webcam/frames/*
+
+# Scraped webcam metadata:
+webcam/metadata/metadata.p

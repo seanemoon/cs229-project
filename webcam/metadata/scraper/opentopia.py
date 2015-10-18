@@ -9,9 +9,13 @@ import urllib.request
 
 
 class Scraper(abstract.Scraper):
-  """Scrapes metadata from webcams on Opentopia"""
+  """Scrapes metadata from webcams on Opentopia
 
-
+  Usage Example:
+    print("Scraping from %s." % openopia.Scraper.source())
+    for identifier in identifiers:
+      opentopia.Scraper(identifier)
+  """
   @staticmethod
   def scrape(identifier):
     """Scrapes and returns the metadata for the webcam.
@@ -24,8 +28,8 @@ class Scraper(abstract.Scraper):
     """
     try:
       response = urllib.request.urlopen(
-          Scraper.construct_request(identifier))
-      m = Scraper.extract_metadata(response.read())
+          Scraper._construct_request(identifier))
+      m = Scraper._extract_metadata(response.read())
     except urllib.error.URLError as error:
       logger = logging.getLogger('opentopia_webcam_metadata_scraper')
       logger.error('failed to scrape metadata for %s.' % identifier)
@@ -47,7 +51,7 @@ class Scraper(abstract.Scraper):
 
 
   @staticmethod
-  def construct_request(identifier):
+  def _construct_request(identifier):
     """Constructs a request for the webcam identifier
 
     Args:
@@ -63,7 +67,7 @@ class Scraper(abstract.Scraper):
 
 
   @staticmethod
-  def parse_caminfo_elem(caminfo_elem):
+  def _parse_caminfo_elem(caminfo_elem):
     """Parses a caminfo element containing various metadata.
 
     Args:
@@ -87,13 +91,15 @@ class Scraper(abstract.Scraper):
               metadata_tuples.append((key, value))
               break
           else:
-            value = label.text.strip().lower()
-      metadata_tuples.append((key, value))
+            if label.text:
+              value = label.text.strip().lower()
+      if key and value:
+        metadata_tuples.append((key, value))
     return metadata_tuples
 
 
   @staticmethod
-  def extract_metadata(page):
+  def _extract_metadata(page):
     """Extracts and returns metadata about the page's webcam.
 
     Args:
@@ -109,7 +115,7 @@ class Scraper(abstract.Scraper):
     caminfo_elems = tree.xpath(caminfo_xpath)
 
     if caminfo_elems:
-      caminfo = Scraper.parse_caminfo_elem(caminfo_elems[0])
+      caminfo = Scraper._parse_caminfo_elem(caminfo_elems[0])
     else:
       caminfo = []
 
@@ -123,5 +129,4 @@ class Scraper(abstract.Scraper):
       m[key] = value
     m['livestill_url'] = livestill_url
     m['is_live'] = livestill_url and b'trouble contacting' not in page
-
     return metadata.Metadata(m)

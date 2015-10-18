@@ -1,5 +1,7 @@
+import logging
+import os
 import pickle
-import io
+
 
 class Manager(object):
   """Manages webcam metadata.
@@ -13,28 +15,73 @@ class Manager(object):
     metadata_manager = webcam.metadata.Manager(database_file)
 
     for webcam_metadata in metadata_manager:
-      ...
+      use(webcam_metadata)
 
     metadata_manager.set_scraper(scraper.opentopia.Scraper)
     metadata = metadata_manager.get('11232')
   """
-  def __init__(self, metadata_path):
-    """Initializes a Manager object
+  def __init__(self, metadata_path = None):
+    """Initializes a Manager object.
 
     Args:
-      metadata_path (string): The path to the pickled metadata.
+      metadata_path (string, optional): The path to the pickled metadata.
     """
-    self._metadata_path = metadata_path
+    self._metadata_path = metadata_path or Manager._default_metadata_path()
+    self._logger = logging.getLogger('webcam.manager.Manager')
     try:
-      self._metadata = pickle.load(io.open(self._metadata_path, 'rb'))
+      with open(self._metadata_path, 'rb') as f:
+        try:
+          self._metadata = pickle.load(f)
+        except Exception as error:
+          self._logger.fatal(
+              'Error unpickling metadata. Please verify that %s is valid.' %
+                  self._metadata_path)
+          raise error
     except FileNotFoundError:
       self._metadata = {}
+    except OSError as error:
+      self._logger.fatal(
+          'Error loading metadata. Please verify that %s is valid.' %
+              self._metadata_path)
+      raise error
     self._metadata_is_dirty = False
 
 
-  def __del__(self):
-    """Called when the Manager is deleted."""
-    self._persist_metadata()
+  def __enter__(self):
+    """Called at the beginning of a with block."""
+    return self
+
+
+  def __exit__(self, type, value, traceback):
+    """Called at the end of a with block."""
+    self.persist_changes()
+
+
+  @staticmethod
+  def _default_metadata_path():
+    """Returns the default metadata path.
+
+    Returns:
+      string: The default metadata path.
+    """
+    return "%s/%s" % (os.path.dirname(os.path.realpath(__file__)),
+        "metadata.p")
+
+
+  def persist_changes(self):
+    """Persists the metadata changes.
+
+    Pickles the metadata and saves it to the metadata path.
+    """
+    if self._metadata_is_dirty:
+      try:
+        with open(self._metadata_path, 'wb') as f:
+          self._logger.info('Persisting metadata changes.')
+          pickle.dump(self._metadata, f)
+          self._metadata_is_dirty = False
+      except OSError as error:
+        self._logger.error('failed to persist webcam metadata.')
+        self._logger.error(error)
 
 
   def get(self, identifier, source=None):
@@ -63,6 +110,7 @@ class Manager(object):
         return self._metadata[key]
       else:
         metadata = self._scraper.scrape(identifier)
+        self._logger.info('Scraping %s from %s.' % (identifier, self._scraper.source()))
         self._add(metadata)
         return metadata
     else:
@@ -90,11 +138,3 @@ class Manager(object):
     self._metadata[key] = metadata
     self._metadata_is_dirty = True
 
-  def _persist_metadata(self):
-    """Persists the metadata.
-
-    Pickles the metadata and saves it to the metadata path.
-    """
-    if self._metadata_is_dirty:
-      pickle.dump(self._metadata, io.open(self._metadata_path, 'wb'))
-      self._metadata_is_dirty = False

@@ -1,8 +1,8 @@
 import abc
 
+
 class Scraper(object, metaclass=abc.ABCMeta):
   """An abstract interface for scraping metadata from webcams."""
-
   @staticmethod
   @abc.abstractmethod
   def scrape(identifier):
@@ -14,7 +14,7 @@ class Scraper(object, metaclass=abc.ABCMeta):
     Returns:
       WebcamMetadata: Metadata for the webcam.
     """
-    pass
+    raise NotImplementedError
 
 
   @staticmethod
@@ -25,4 +25,4 @@ class Scraper(object, metaclass=abc.ABCMeta):
     Returns:
       string: Canonical name for where this scraper gets its information.
     """
-    pass
+    raise NotImplementedError

@@ -1,5 +1,5 @@
-import scraper.opentopia
-import manager
+from . import scraper.opentopia
+from . import manager
 
 
 # Tests basic functionality of the webcam metadata manager.
