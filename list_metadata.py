@@ -28,10 +28,10 @@ def list_metadata(must_be_live):
 
 
 def main():
-  """Scrapes frames from the webcam.
+  """Lists metadata that we have persisted locally.
 
   Usage Example:
-    scrape_frames.py --source=opentopia --identifier=11008 --frequency=0.017
+    list_metadata.py --live
   """
   parser = argparse.ArgumentParser(prog='list_metadata')
   parser.add_argument('-l', '--live', action='store_true', required=False,
