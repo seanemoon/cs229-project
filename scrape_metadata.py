@@ -21,11 +21,16 @@ def scrape(source, identifiers):
   except ImportError:
     print("Could not import scraper %s." % source)
     return
+  num_unsaved = 0
   with webcam.metadata.manager.Manager() as manager:
     manager.set_scraper(scraper_module.Scraper)
     for identifier in identifiers:
       manager.get(identifier)
+      num_unsaved += 1
       time.sleep(1)
+      if num_unsaved >= 50:
+        manager.persist_changes()
+        num_unsaved = 0
 
 
 def main():
