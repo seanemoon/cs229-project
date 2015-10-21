@@ -7,6 +7,12 @@ import webcam.metadata.manager
 
 
 def list_metadata(must_be_live):
+  """Lists metadata that we have persisted locally.
+
+  Args:
+    must_be_live (bool): When true, the metadata we print must contain live
+        links which we can get frames from.
+  """
   manager = webcam.metadata.manager.Manager()
   if must_be_live:
     metadata = manager.get_live_webcam_metadata()
