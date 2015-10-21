@@ -1,0 +1,2 @@
+Currently (10/21/2015), it appears that these are the valid range of webcams on
+Opentopia: 1:16597
