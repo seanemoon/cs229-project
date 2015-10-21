@@ -1,3 +1,5 @@
+#! /bin/python3.5
+
 import webcam.metadata.manager
 import webcam.webcam
 

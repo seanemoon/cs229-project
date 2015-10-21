@@ -128,13 +128,13 @@ class Manager(object):
     self._scraper = scraper
 
 
-  def get_webcam_metadata():
+  def get_webcam_metadata(self):
     """Returns a list of all known webcam metadata.
 
     Returns:
       list (scraper.metadata.Metadata): A list of all known webcam metadata.
     """
-    return [metdata for key, metadata in self._metadata.iteritems()]
+    return [metadata for key, metadata in self._metadata.items()]
 
 
   def get_live_webcam_metadata(self):
@@ -145,8 +145,8 @@ class Manager(object):
           where metadata.is_live is True.
     """
     webcam_metadata = []
-    for key, metadata in self._metadata.iteritems():
-      if hasattr(metadata, 'is_live') and metadata.is_live
+    for key, metadata in self._metadata.items():
+      if hasattr(metadata, 'is_live') and metadata.is_live:
         webcam_metadata.append(metadata)
     return webcam_metadata
 
