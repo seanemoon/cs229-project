@@ -1,0 +1,40 @@
+#! /bin/python3.5
+
+import argparse
+import logging
+
+import webcam.metadata.manager
+
+
+def list_metadata(must_be_live):
+  manager = webcam.metadata.manager.Manager()
+  if must_be_live:
+    metadata = manager.get_live_webcam_metadata()
+  else:
+    metadata = manager.get_webcam_metadata()
+  for m in sorted(metadata, key=lambda m: int(m.identifier)):
+    if m.is_live:
+      live_text = "LIVE"
+    else:
+      live_text = "down"
+    print("%s %08d (%s): %s" % (m.source, int(m.identifier), live_text,
+      m.livestill_url))
+
+
+def main():
+  """Scrapes frames from the webcam.
+
+  Usage Example:
+    scrape_frames.py --source=opentopia --identifier=11008 --frequency=0.017
+  """
+  parser = argparse.ArgumentParser(prog='list_metadata')
+  parser.add_argument('-l', '--live', action='store_true', required=False,
+      help='Whether you require the webcams to be live.')
+  args = parser.parse_args()
+
+  logging.basicConfig(level=logging.INFO)
+  list_metadata(args.live)
+
+
+if __name__ == "__main__":
+  main()
