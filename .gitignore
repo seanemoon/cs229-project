@@ -64,3 +64,6 @@ webcam/frames/*
 
 # Scraped webcam metadata:
 webcam/metadata/metadata.p
+
+# Ignore logs:
+*.log

@@ -27,7 +27,8 @@ class Manager(object):
       metadata_path (string, optional): The path to the pickled metadata.
     """
     self._metadata_path = metadata_path or Manager._default_metadata_path()
-    self._logger = logging.getLogger('webcam.manager.Manager')
+    self._logger = logging.getLogger('webcam.metadata.manager.Manager')
+    self._scraper = None
     try:
       with open(self._metadata_path, 'rb') as f:
         try:
@@ -108,7 +109,7 @@ class Manager(object):
       key = (source or self._scraper.source(), identifier)
       if key in self._metadata:
         return self._metadata[key]
-      else:
+      elif self._scraper:
         metadata = self._scraper.scrape(identifier)
         self._logger.info('Scraping %s from %s.' % (identifier, self._scraper.source()))
         self._add(metadata)

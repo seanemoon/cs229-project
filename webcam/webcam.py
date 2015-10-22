@@ -2,6 +2,7 @@ import datetime
 import glob
 import logging
 import os
+import socket
 import urllib
 import urllib.error
 import urllib.request
@@ -41,15 +42,18 @@ class Webcam(object):
     Returns:
       string: The directory in which frames are stored.
     """
-    return "%s/frames/%s_%s/" % (os.path.dirname(os.path.realpath(__file__)),
-        self._metadata.source, self._metadata.identifier)
+    return "%s/frames/%s_%08d/" % (os.path.dirname(os.path.realpath(__file__)),
+        self._metadata.source, int(self._metadata.identifier))
 
 
-  def fetch_current_frame(self):
+  def fetch_current_frame(self, timeout=10):
     """Fetches the current frame from the webcam.
 
     Constructs and sends an HTTP request to the webcam. Saves the response to
     self._frame_directory().
+
+    Args:
+      timeout (int, default 10): The maximum time to block on a connection.
 
     Returns:
       bool: True if and only if a frame was succesfully stored.
@@ -60,8 +64,9 @@ class Webcam(object):
       return False
 
     try:
-      response = urllib.request.urlopen(self._metadata.livestill_url)
-    except urllib.error.URLError as error:
+      response = urllib.request.urlopen(self._metadata.livestill_url,
+          timeout=timeout)
+    except (urllib.error.URLError, socket.timeout) as error:
       self._logger.error('Failed to fetch current frame for (%s, %s).' %
           (self._metadata.source, self._metadata.identifier))
       self._logger.error(error)
@@ -104,3 +109,22 @@ class Webcam(object):
     print("%s*.jpg", self._frame_directory())
     for filename in sorted(glob.glob("%s*.jpg" % self._frame_directory())):
       yield filename
+
+
+  def is_live(self):
+    """Indicates whether we can get live frames from this webcam.
+
+    Returns:
+      bool: True if and only if, to the best of our knowledge, we can get live
+          frames from this webcam.
+    """
+    return hasattr(self._metadata, 'is_live') and self._metadata.is_live
+
+
+  def identifier(self):
+    """The identifier for this webcam.
+
+    Returns:
+      str: The unique identifier for this webcam.
+    """
+    return self._metadata.identifier
