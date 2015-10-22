@@ -143,7 +143,7 @@ def main():
   """Scrapes frames from the webcam.
 
   Usage Example:
-    scrape_frames.py --source=opentopia --identifier=11008 --frequency=0.017
+    scrape_frames.py --source=opentopia --identifiers=1:17000
   """
   # Retrieve command-line arguments.
   parser = argparse.ArgumentParser(prog='scrape_frames')
