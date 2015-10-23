@@ -66,7 +66,7 @@ class Webcam(object):
     try:
       response = urllib.request.urlopen(self._metadata.livestill_url,
           timeout=timeout)
-    except (urllib.error.URLError, socket.timeout) as error:
+    except Exception as error:
       self._logger.error('Failed to fetch current frame for (%s, %s).' %
           (self._metadata.source, self._metadata.identifier))
       self._logger.error(error)
@@ -83,7 +83,7 @@ class Webcam(object):
             (self._metadata.identifier, self._metadata.source))
         f.write(response.read())
       return True
-    except IOError as error:
+    except Exception as error:
       self._logger.error('failed to save current frame for (%s, %s).' %
           (self._metadata.source, self._metadata.identifier))
       self._logger.error(error)

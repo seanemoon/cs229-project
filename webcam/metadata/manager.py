@@ -40,7 +40,7 @@ class Manager(object):
           raise error
     except FileNotFoundError:
       self._metadata = {}
-    except OSError as error:
+    except (OSError, Exception) as error:
       self._logger.fatal(
           'Error loading metadata. Please verify that %s is valid.' %
               self._metadata_path)

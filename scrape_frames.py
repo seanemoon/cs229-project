@@ -83,8 +83,8 @@ def dispatcher_thread_fn(webcams, webcam_queue, period, duration):
   logger = logging.getLogger('main.dispatcher')
   logger.info("Scraping frames for %d webcams.", len(webcams))
   time_started = datetime.datetime.now()
-  time_last_scraped = datetime.datetime.now()
   while datetime.datetime.now() < time_started + duration:
+    time_last_scraped = datetime.datetime.now()
     logger.info("Dispatching scrape requests.")
     if not webcam_queue.empty():
       logger.error("Taking too long to consume scrape requests.")
@@ -153,7 +153,7 @@ def main():
     default=["1:17000"],
         help='A colon separated range of the form [START:END].')
   parser.add_argument('-f', '--period', nargs=1, required=False,
-      default=["15"], help='The period between frames (in Minutes).')
+      default=["5"], help='The period between frames (in Minutes).')
   parser.add_argument('-d', '--duration', nargs=1, required=False,
       default=["7"], help='The duration to scrape for (in Days).')
   parser.add_argument('-t', '--threads', nargs=1, required=False,
