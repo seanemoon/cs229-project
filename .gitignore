@@ -67,3 +67,9 @@ webcam/metadata/metadata.p
 
 # Ignore logs:
 *.log
+
+# Build directory:
+cluster/build/
+
+# Resources for testing:
+cluster/res/
