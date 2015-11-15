@@ -22,21 +22,21 @@ const static char* kKeypointDetector = "SIFT";
 const static char* kKeypointDescriptor = "SIFT";
 
 // Number of words in the bag-of-features representation.
-const static size_t kVocabSize{300};
+const static size_t kVocabSize{150};
 // Number of times to run k-means when generating the vocabulary.
 const static size_t kNumVocabAttempts{20};
 
 // Number of image categories.
-const static size_t kNumClusters{100};
+const static int kNumClusters{100};
 // Number of times to run k-means when clustering images.
-const static size_t kNumClusterAttempts{3};
+const static size_t kNumClusterAttempts{20};
 
 
 
 // Threading.
 // Some keypoint detector/descriptors are implemented to be multithreaded. In
 // this case, we should only use one thread.
-const static size_t kNumThreadsExtractDescriptors {1};
+const static size_t kNumThreadsExtractDescriptors {12};
 // Computing features is done by hand, so multithreading can increase
 // throughput.
 const static size_t kNumThreadsComputeFeatures {12};
@@ -260,7 +260,7 @@ FeaturesMap compute_features(const DescriptorsMap& descriptors_map,
 }
 
 
-ClustersMap cluster(const FeaturesMap& features_map) {
+ClustersMap cluster(const FeaturesMap& features_map, int num_clusters) {
   std::cout << features_map.size() << std::endl;
 
   std::vector<std::string> ids;
@@ -276,7 +276,7 @@ ClustersMap cluster(const FeaturesMap& features_map) {
 
   cv::Mat centroids;
   cv::Mat best_labels;
-  const size_t num_centroids{kNumClusters};
+  const int num_centroids{num_clusters};
   const int num_attempts{kNumClusterAttempts};
   const double epsilon{0.1};
   const cv::TermCriteria term_criteria(cv::TermCriteria::EPS, 0, epsilon);
@@ -304,9 +304,14 @@ ClustersMap cluster(const FeaturesMap& features_map) {
 }
 
 int main(int argc, char** argv) {
-  if (argc != 2) {
-    std::cout << "USAGE: ./COMPLETE <frames_dir>" << std::endl;
+  if (argc < 2 || argc > 3) {
+    std::cout << "USAGE: ./COMPLETE <frames_dir> [num_clusters]" << std::endl;
     exit(2);
+  }
+
+  int num_clusters{kNumClusters};
+  if (argc == 3) {
+    num_clusters = std::stoi(argv[2]);
   }
 
   const wc::FramesManager frames_manager{argv[1]};
@@ -352,7 +357,7 @@ int main(int argc, char** argv) {
   // Cluster the images.
   print_current_time();
   std::cout << "Clustering images." << std::endl;
-  ClustersMap cluster_map{cluster(features_map)};
+  ClustersMap cluster_map{cluster(features_map, num_clusters)};
 
   // Visualize the clusters.
   for (const auto& pair : cluster_map) {

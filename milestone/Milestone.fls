@@ -117,6 +117,12 @@ INPUT ./LightingConditions.PNG
 INPUT BackgroundSubtraction1.PNG
 INPUT ./BackgroundSubtraction1.PNG
 INPUT ./BackgroundSubtraction1.PNG
+INPUT HighlightedAnimals.PNG
+INPUT ./HighlightedAnimals.PNG
+INPUT ./HighlightedAnimals.PNG
+INPUT SameScene.PNG
+INPUT ./SameScene.PNG
+INPUT ./SameScene.PNG
 INPUT Milestone.aux
 INPUT /usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb
 INPUT /usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb

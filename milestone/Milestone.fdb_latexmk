@@ -1,7 +1,9 @@
 # Fdb version 3
-["pdflatex"] 1447570994 "Milestone.tex" "Milestone.pdf" "Milestone" 1447570995
+["pdflatex"] 1447631017 "Milestone.tex" "Milestone.pdf" "Milestone" 1447631018
   "./BackgroundSubtraction1.PNG" 1447560334 783459 3a40385ce9bfb5dbe06d3c1448c19234 ""
+  "./HighlightedAnimals.PNG" 1447629214 2810651 0b2c0cfc4469db58587f14e74bffa32c ""
   "./LightingConditions.PNG" 1447560334 589661 27f3dace971b46565c7ed6a1b9aea5ee ""
+  "./SameScene.PNG" 1447630441 1996711 28cb4f9f07a53669b3b82ce9960ecfc0 ""
   "/home/seanraff/texmf/tex/generic/oberdiek/etexcmds.sty" 1338203173 7612 c47308d923ec19888707b0f1792b326a ""
   "/home/seanraff/texmf/tex/generic/oberdiek/ifluatex.sty" 1338204386 7324 11d14f318d865f420e692d4e6c9c18c3 ""
   "/home/seanraff/texmf/tex/generic/oberdiek/ifpdf.sty" 1338204454 7140 ece2cc23d9f20e1f53975ac167f42d3e ""
@@ -71,10 +73,12 @@
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1444062723 1634688 431e3db3d0eb4c92c879d276686b5169 ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1444062690 7209435 393c534959e5b02dfc46aca3672fd975 ""
   "BackgroundSubtraction1.PNG" 1447560334 783459 3a40385ce9bfb5dbe06d3c1448c19234 ""
+  "HighlightedAnimals.PNG" 1447629214 2810651 0b2c0cfc4469db58587f14e74bffa32c ""
   "LightingConditions.PNG" 1447560334 589661 27f3dace971b46565c7ed6a1b9aea5ee ""
-  "Milestone.aux" 1447570995 771 4ad9931838b659ff8c50e423d82f2706 ""
-  "Milestone.tex" 1447570992 14962 f817bc6a1ba92f246c6e9294fd70a16c ""
+  "Milestone.aux" 1447631018 1578 a121ca57f8b068eb2b135b06a75c878b ""
+  "Milestone.tex" 1447631017 17333 5382c0ffaff10fe602842b90d0d645a3 ""
+  "SameScene.PNG" 1447630441 1996711 28cb4f9f07a53669b3b82ce9960ecfc0 ""
   (generated)
+  "Milestone.log"
   "Milestone.aux"
   "Milestone.pdf"
-  "Milestone.log"

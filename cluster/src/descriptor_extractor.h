@@ -49,8 +49,8 @@ public:
   void visualize_keypoints(const std::vector<cv::Mat>& images,
       const std::string& out_dir, size_t max_keypoints = 0) const;
 
-  const static size_t kNumFramesPerWebcam {30};
-  const static size_t kMaxDescriptorsPerFrame {300};
+  const static size_t kNumFramesPerWebcam {10};
+  const static size_t kMaxDescriptorsPerFrame {100};
   cv::Mat extract_representative(const std::vector<cv::Mat>& frames) const;
 
 

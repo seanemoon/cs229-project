@@ -34,22 +34,23 @@ can define is a measure of the activity that is occurring as recorded by the
 webcam. In order to highlight webcams that have a high interest metric, we use
 a background subtraction algorithm combined with some post-processing to detect
 foregound objects against the background recorded by the webcam. This is
-detailed in section 2.
+detailed in section 3.
 
 Another method that we use to explore the data set is to perform K-means
 clustering on the webcam images to see if the webcams in the data set can be
 meaningfully clustered. For example, in the data set there could be a cluster
 of webcams that are located outdoors, a cluster of webcams that show natural
-scenery, a cluster of webcams that show images of towns around the world, etc.
-\textcolor{red}{[! Sean to add more stuff here about context/results behind
-K-means!]}
+scenery, a cluster of webcams that show images of towns around the world, etc. Our
+results show that it is possible to find semantically meaningful clusters. This
+is detailed in section 2.
 
 \section{Clustering}
 First, we will discuss what class of categories we are trying to achieve with
 our clustering. Then, we describe our method of generating features which are
 capable of achieving these categories. Next, we will discuss the choices we
-made with respect to modeling the problem and our use of clustering. Finally,
-we will present our results and ideas for future improvement.
+made with respect to modeling the problem and our use of clustering, and how we
+used our results to iteratively improve these choices. Finally, we will suggest
+a few ways to improve on our approach.
 
 Our goal is to cluster webcams in ways that people will find both interesting
 and useful. Therefore, it wasn't good enough to achieve clusters that are
@@ -109,18 +110,28 @@ lecture draft\footnote{K. Grauman, B. Leibe, Visual Recognition, 2009,
 http://www.cs.utexas.edu/~grauman/courses/fall2009/papers/bag\_of\_visual\_words.pdf},
 interest operators (like SIFT, SURF, and FREAK) will provide reasonabily
 distinct descriptors for specific objects. However, dense detectors perform
-better for category-level tasks. Recall that we've posited that objects are
-what we are interested in detecting. However, we are detecting them for the
-purpose of categorization. Therefore, we tested the above descriptor extractors
-using both their corresponding keypoint detectors as well as a general dense
-keypoint detector (as implemented by OpenCV).
+better for category-level tasks. Recall that we've stated that we are
+interested in detecting objects. However, we are detecting them for the purpose
+of categorization. Therefore, we tested the above descriptor extractors using
+both their corresponding keypoint detectors as well as a general dense keypoint
+detector (as implemented by OpenCV).
 
 The choice of cluster sizes was fairly experimental. A larger vocabulary gives
 you more power, but also increase the risk of overfitting. Similarly, a smaller
-vocabulary gives you generalization but may be too weak. We eventually decided
-on a vocabulary of size $300$. The number of webcam categories experiences
-similar behavior. We wish for the categories to be meaningful (implying more
-categories) but also easily distinguishable (implying fewer categories).
+vocabulary gives you generalization but may be too weak. We started with a
+vocabulary of size $300$. We saw that we were able to capture similar views of
+the same scene consistently, but were sometimes unable to capture very similar
+scenes. See figure $\ref{Fig:SameScene}$ for an example of us detecting the
+same scene from different viewpoints. Therefore, we believed we may be
+overfitting and so we reduced the vocabulary size to $150$.  Now we see that we
+are capturing similar concepts.  See figure $\ref{Fig:HighlightedAnimals}$ for
+an example.  The number of webcam categories experiences similar behavior. We
+wish for the categories to be meaningful (implying more categories) but also
+easily distinguishable (implying fewer categories). In example above, we saw
+that we had a meaningful cluster (animals) but also had some other webcams with
+it.  This example used $20$ categories. Therefore, we concluded that having
+more clusters may be beneficial, and so increased the number of categories to
+$50$.
 
 
 For the clustering algorithm itself, we decided to use k-means. This is perhaps
@@ -131,9 +142,18 @@ and found that k-means++ produced significantly better clusters.
 \textcolor{red}{TODO(seanrafferty): Experiment with different number of runs of
 k-means.}.
 
-\textcolor{red}{TODO(seanrafferty): Results}
+We have a few ideas for improving this algorithm. First, we could preprocess
+the images. In this stage, we could ensure that all images are roughly the same
+size. Furthermore, we may be able to achieve similar results much faster by
+reducing the size of our images. Furthermore, we believe we can improve
+performance by only using frames which are well-lit (taken in the afternoon) in
+this algorithm. We are interested in clustering webcams, not frames, and we
+believe that well-lit webcams are more representative of the interesting
+features associated with the webcam. Furthermore, most webcams look similar at
+night (either bright lights or a completely black screen), and are therefore
+just noise added to the system. Therefore, we believe it is possible to improve
+results significantly by only using frames taken during the day.
 
-\textcolor{red}{TODO(seanrafferty): Suggestions for improvement}
 
 
 \section{Background Subtraction and Activity Detection}
@@ -250,6 +270,26 @@ motion detector.
 \caption{Example of background/foreground segmentation algorithm}
 \label{Fig:ForegroundDetection}
 \end{figure}
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale = 0.32, angle = 90]{HighlightedAnimals}
+  \caption{An example of clustering using SIFT for keypoint detection and
+  descriptor extraction. We used a vocabulary of size $150$ and segmented
+webcams into $20$ categories. Each tile represents an arbitrary frame from each
+webcam in the cluster. All webcams in this cluster are represented.}
+  \label{Fig:HighlightedAnimals}
+\end{figure}
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale = 0.32, angle = 90]{SameScene}
+  \caption{An example of clustering using SIFT for keypoint detection and
+  descriptor extraction. We used a vocabulary of size $300$ and segmented
+webcams into $100$ categories. Each tile represents an arbitrary frame from each
+webcam in the cluster. Only a subset of webcams in this cluster are
+represented.}
+  \label{Fig:SameScene}
+\end{figure}
+
 
 
 
