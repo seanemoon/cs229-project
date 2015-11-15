@@ -77,8 +77,8 @@ into a much smaller number of descriptors. Then, we can compute a feature
 vector for each webcam by first sampling descriptors from each webcam and then
 computing a histogram of the closest descriptors in the visual vocabulary. In
 this way, we are left with feature vectors that have the same dimension as the
-descriptors we have computed. Once we have these features, we can cluster the
-webcams into categories that roughly correspond to the presence of objects.
+the vocabulary size. Once we have these features, we can cluster the webcams
+into categories that roughly correspond to the presence of objects.
 
 There are quite a few design decisions within this framework. First, we had to
 decide how to sample descriptors from the webcams to both generate the
@@ -113,7 +113,7 @@ better for category-level tasks. Recall that we've posited that objects are
 what we are interested in detecting. However, we are detecting them for the
 purpose of categorization. Therefore, we tested the above descriptor extractors
 using both their corresponding keypoint detectors as well as a general dense
-feature detector (as implemented by OpenCV).
+keypoint detector (as implemented by OpenCV).
 
 The choice of cluster sizes was fairly experimental. A larger vocabulary gives
 you more power, but also increase the risk of overfitting. Similarly, a smaller

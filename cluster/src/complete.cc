@@ -27,7 +27,7 @@ const static size_t kVocabSize{300};
 const static size_t kNumVocabAttempts{20};
 
 // Number of image categories.
-const static size_t kNumClusters{3};
+const static size_t kNumClusters{100};
 // Number of times to run k-means when clustering images.
 const static size_t kNumClusterAttempts{3};
 
@@ -72,6 +72,7 @@ const std::string kDescriptorsDir{"descriptors"};
 const std::string kFeaturesDir{"features"};
 const std::string kVocabularyDir{"vocabulary"};
 const std::string kClustersDir{"clusters"};
+const std::string kClustersVisDir{"clusters_vis"};
 
 
 // Quick and dirty profiling.
@@ -219,11 +220,9 @@ void compute_features_fn(const DescriptorsMap& descriptors_map,
 
     std::vector<int> histogram(vocabulary_size);
     for (int d{0}; d < num_descriptors; ++d) {
-      std::cout << "A" << std::endl;
       double smallest_distance{std::numeric_limits<double>::max()};
       size_t closest_word{0};
       for (int v{0}; v < vocabulary_size; ++v) {
-        std::cout << "B" << std::endl;
         double distance{cv::norm(descriptors.row(d) - vocabulary.row(v))};
         if (distance < smallest_distance) {
           smallest_distance = distance;
@@ -233,7 +232,6 @@ void compute_features_fn(const DescriptorsMap& descriptors_map,
       histogram[closest_word] += 1;
     }
 
-    std::cout << "C" << std::endl;
     cv::Mat features(histogram);
 
     if (features.data) {
@@ -266,9 +264,11 @@ ClustersMap cluster(const FeaturesMap& features_map) {
   std::cout << features_map.size() << std::endl;
 
   std::vector<std::string> ids;
-  cv::Mat all_features(128, 0, CV_32F);
+  cv::Mat row;
+  cv::Mat all_features;
   for (const auto& pair : features_map) {
-    all_features.push_back(pair.second);
+    cv::transpose(pair.second, row);
+    all_features.push_back(row);
     ids.push_back(pair.first);
   }
 
@@ -282,8 +282,10 @@ ClustersMap cluster(const FeaturesMap& features_map) {
   const cv::TermCriteria term_criteria(cv::TermCriteria::EPS, 0, epsilon);
   const int flags{cv::KMEANS_PP_CENTERS};
 
+  all_features.convertTo(all_features, CV_32F);
   std::cout << all_features.size() << std::endl;
   std::cout << all_features.type() << std::endl;
+  std::cout << CV_32F << std::endl;
   std::cout << num_centroids << std::endl;
 
   cv::kmeans(all_features, num_centroids, best_labels, term_criteria,
@@ -311,40 +313,61 @@ int main(int argc, char** argv) {
   std::vector<std::string> ids {frames_manager.GetWebcamIdentifiers()};
 
   print_current_time();
-  DescriptorsMap descriptors_map{load_descriptors(ids)};
-  if (descriptors_map.empty()) {
-    std::cout << "Extracting descriptors." << std::endl;
-    descriptors_map = extract_descriptors(frames_manager);
-  } else { 
-    std::cout << "Using cached descriptors." << std::endl;
-  }
-
-  print_current_time();
-  cv::Mat vocabulary = load_vocabulary();
-  if (!vocabulary.data) {
-    std::cout << "Generating vocabulary." << std::endl;
-    vocabulary = generate_vocabulary(descriptors_map);
-  } else {
-    std::cout << "Using cached vocabulary." << std::endl;
-  }
-
-  print_current_time();
+  std::cout << "Attempting to load features..." << std::endl;
   FeaturesMap features_map{load_features(ids)};
   if (features_map.empty()) {
+    std::cout << "Features not found." << std::endl;
+
+    // Extract descriptors.
+    print_current_time();
+    std::cout << "Attempting to load descriptors..." << std::endl;
+    DescriptorsMap descriptors_map{load_descriptors(ids)};
+    if (descriptors_map.empty()) {
+      std::cout << "Descriptors not found." << std::endl;
+      std::cout << "Extracting descriptors." << std::endl;
+      descriptors_map = extract_descriptors(frames_manager);
+    } else { 
+      std::cout << "Using cached descriptors." << std::endl;
+    }
+
+    // Generate vocabulary.
+    print_current_time();
+    std::cout << "Attemping to load vocabulary..." << std::endl;
+    cv::Mat vocabulary = load_vocabulary();
+    if (!vocabulary.data) {
+      std::cout << "Vocabulary not found." << std::endl;
+      std::cout << "Generating vocabulary." << std::endl;
+      vocabulary = generate_vocabulary(descriptors_map);
+    } else {
+      std::cout << "Using cached vocabulary." << std::endl;
+    }
+
+    // Compute features.
     std::cout << "Computing features." << std::endl;
     FeaturesMap features_map{compute_features(descriptors_map, vocabulary)};
   } else {
     std::cout << "Using cached features." << std::endl;
   }
 
+  // Cluster the images.
   print_current_time();
   std::cout << "Clustering images." << std::endl;
   ClustersMap cluster_map{cluster(features_map)};
+
+  // Visualize the clusters.
+  for (const auto& pair : cluster_map) {
+    cv::Mat sample = frames_manager.GetFirstFrame(pair.first);
+    int label = pair.second.at<int>(0);
+    if (sample.data) {
+      cv::imwrite(kClustersVisDir + "/" + std::to_string(label) + "/" + pair.first + ".jpg", sample);
+    }
+  }
 
   return 0;
 }
 
 
+/*
 int main(int argc, char** argv) {
   if (argc != 2) {
     std::cout << "USAGE: ./COMPLETE <frames_dir>" << std::endl;
@@ -387,3 +410,4 @@ int main(int argc, char** argv) {
 
   return 0;
 }
+*/
