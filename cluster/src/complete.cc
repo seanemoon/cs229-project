@@ -301,6 +301,49 @@ ClustersMap cluster(const FeaturesMap& features_map) {
   return cluster_map;
 }
 
+int main(int argc, char** argv) {
+  if (argc != 2) {
+    std::cout << "USAGE: ./COMPLETE <frames_dir>" << std::endl;
+    exit(2);
+  }
+
+  const wc::FramesManager frames_manager{argv[1]};
+  std::vector<std::string> ids {frames_manager.GetWebcamIdentifiers()};
+
+  print_current_time();
+  DescriptorsMap descriptors_map{load_descriptors(ids)};
+  if (descriptors_map.empty()) {
+    std::cout << "Extracting descriptors." << std::endl;
+    descriptors_map = extract_descriptors(frames_manager);
+  } else { 
+    std::cout << "Using cached descriptors." << std::endl;
+  }
+
+  print_current_time();
+  cv::Mat vocabulary = load_vocabulary();
+  if (!vocabulary.data) {
+    std::cout << "Generating vocabulary." << std::endl;
+    vocabulary = generate_vocabulary(descriptors_map);
+  } else {
+    std::cout << "Using cached vocabulary." << std::endl;
+  }
+
+  print_current_time();
+  FeaturesMap features_map{load_features(ids)};
+  if (features_map.empty()) {
+    std::cout << "Computing features." << std::endl;
+    FeaturesMap features_map{compute_features(descriptors_map, vocabulary)};
+  } else {
+    std::cout << "Using cached features." << std::endl;
+  }
+
+  print_current_time();
+  std::cout << "Clustering images." << std::endl;
+  ClustersMap cluster_map{cluster(features_map)};
+
+  return 0;
+}
+
 
 int main(int argc, char** argv) {
   if (argc != 2) {
