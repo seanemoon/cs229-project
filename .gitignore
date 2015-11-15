@@ -73,3 +73,5 @@ cluster/build/
 
 # Resources for testing:
 cluster/res/
+
+analysis/

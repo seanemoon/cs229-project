@@ -5,6 +5,10 @@
 #include <opencv2/highgui/highgui.hpp>
 
 
+#include <vector>
+#include <map>
+
+
 namespace wc {
 
 
@@ -31,18 +35,36 @@ std::vector<cv::Mat> FramesManager::GetFrames(
   using boost::filesystem::path;
 
   const path webcam_path = directory_/webcam_identifier;
-  std::vector<cv::Mat> frames{};
-  cv::Mat frame{};
+  std::map<std::string, cv::Mat> frames_map{};
 
   for (directory_iterator itr{webcam_path}, end_itr{}; itr != end_itr; ++itr) {
-    frame = cv::imread(itr->path().string(), CV_LOAD_IMAGE_GRAYSCALE);
+    cv::Mat frame{cv::imread(itr->path().string(), CV_LOAD_IMAGE_GRAYSCALE)};
     if (frame.data) {
-      frames.push_back(frame);
+      frames_map[itr->path().leaf().string()] = frame;
     }
   }
 
+  std::vector<cv::Mat> frames{};
+  for (const auto& entry : frames_map) {
+    frames.push_back(entry.second);
+  }
   return frames;
 }
 
+cv::Mat FramesManager::GetFirstFrame(
+    const std::string& webcam_identifier) const {
+  using boost::filesystem::directory_iterator;
+  using boost::filesystem::path;
+
+  const path webcam_path = directory_/webcam_identifier;
+  std::map<std::string, cv::Mat> frames_map{};
+
+  for (directory_iterator itr{webcam_path}, end_itr{}; itr != end_itr; ++itr) {
+    cv::Mat frame{cv::imread(itr->path().string(), CV_LOAD_IMAGE_COLOR)};
+    return frame;
+  }
+  
+  return cv::Mat{};
+}
 
 }  // namespace wc

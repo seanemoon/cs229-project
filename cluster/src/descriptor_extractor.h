@@ -42,11 +42,22 @@ public:
     detector_{cv::FeatureDetector::create(detector_type)} {}
 
   // Extract descriptors from the given image(s).
-  cv::Mat extract(const cv::Mat& image) const;
-  std::vector<cv::Mat> extract(const std::vector<cv::Mat>& images) const;
+  cv::Mat extract(const cv::Mat& image, size_t max_descriptors = 0) const;
+  std::vector<cv::Mat> extract(const std::vector<cv::Mat>& images,
+      size_t max_descriptors = 0) const;
+
+  void visualize_keypoints(const std::vector<cv::Mat>& images,
+      const std::string& out_dir, size_t max_keypoints = 0) const;
+
+  const static size_t kNumFramesPerWebcam {30};
+  const static size_t kMaxDescriptorsPerFrame {300};
+  cv::Mat extract_representative(const std::vector<cv::Mat>& frames) const;
+
 
 
 private:
+  static void SortKeypoints(std::vector<cv::KeyPoint>& keypoints);
+
   cv::Ptr<cv::DescriptorExtractor> extractor_;
   cv::Ptr<cv::FeatureDetector> detector_;
 };

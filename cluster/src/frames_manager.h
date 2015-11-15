@@ -15,6 +15,7 @@ public:
   std::vector<std::string> GetWebcamIdentifiers() const;
 
   std::vector<cv::Mat> GetFrames(const std::string& webcam_identifier) const;
+  cv::Mat GetFirstFrame(const std::string& webcam_identifier) const;
 
 private:
   const boost::filesystem::path directory_;
