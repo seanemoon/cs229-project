@@ -17,12 +17,12 @@
 // HYPERPARMATERS.
 
 // The keypoint detector to use.
-const static char* kKeypointDetector = "SIFT";
+const static char* kKeypointDetector = "Dense";
 // The keypoint descriptor to use.
 const static char* kKeypointDescriptor = "SIFT";
 
 // Number of words in the bag-of-features representation.
-const static size_t kVocabSize{150};
+const static size_t kVocabSize{200};
 // Number of times to run k-means when generating the vocabulary.
 const static size_t kNumVocabAttempts{20};
 
@@ -181,6 +181,12 @@ void generate_vocabulary_fn(const cv::Mat& all_descriptors) {
   const cv::TermCriteria term_criteria(cv::TermCriteria::EPS, 0, epsilon);
   const int flags{cv::KMEANS_PP_CENTERS};
 
+  std::cout << "Descriptors size: " << all_descriptors.size() << std::endl;
+  std::cout << "k: " << std::to_string(num_centroids) << std::endl;
+  std::cout << "descriptors.type() == CV_32F: " 
+      << std::to_string(all_descriptors.type() == CV_32F) << std::endl;
+
+
   cv::kmeans(all_descriptors, num_centroids, best_labels, term_criteria,
       num_attempts, flags, centroids);
 
@@ -194,6 +200,8 @@ cv::Mat generate_vocabulary(const DescriptorsMap& descriptors_map) {
   for (const auto& pair : descriptors_map) {
     all_descriptors.push_back(pair.second);
   }
+
+  all_descriptors.convertTo(all_descriptors, CV_32F);
 
   generate_vocabulary_fn(all_descriptors);
 

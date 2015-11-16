@@ -28,7 +28,16 @@ with a 5-minute recording period over a duration of 1 week. The goal is to
 train our Machine Learning algorithms on this training data set, and then test
 them on the live webcams.
 
-A large majority of webcams at any one time do not display anything
+One method we used to explore the data set is clustering. Our goal was to see
+if there was a way to cluster webcams based on their semantic content.  For
+example, there could be a cluster of webcams that are located outdoors, a
+cluster of webcams that show natural scenery, a cluster of webcams that show
+images of towns around the world, etc. This would also enable use to find
+webcams which are in the same location but just providing different
+perspective. Our results show that it is possible to find semantically
+meaningful clusters. This is detailed in section 2.
+
+Furthermore, A large majority of webcams at any one time do not display anything
 interesting, and simply show a static background. An interest metric that we
 can define is a measure of the activity that is occurring as recorded by the
 webcam. In order to highlight webcams that have a high interest metric, we use
@@ -36,13 +45,6 @@ a background subtraction algorithm combined with some post-processing to detect
 foregound objects against the background recorded by the webcam. This is
 detailed in section 3.
 
-Another method that we use to explore the data set is to perform K-means
-clustering on the webcam images to see if the webcams in the data set can be
-meaningfully clustered. For example, in the data set there could be a cluster
-of webcams that are located outdoors, a cluster of webcams that show natural
-scenery, a cluster of webcams that show images of towns around the world, etc. Our
-results show that it is possible to find semantically meaningful clusters. This
-is detailed in section 2.
 
 \section{Clustering}
 First, we will discuss what class of categories we are trying to achieve with
@@ -98,62 +100,55 @@ are also expected to have feautre vectors with larger norms. Although
 complexity is something we may be interested in clustering, image size is not.
 We address this later in our discussion for improvements.
 
-We experimented with three of the most popular keypoint detectors and
-descriptor extractors: SIFT\footnote{D. Lowe, Distinctive Image Features from
-  Scale-Invariant Keypoints, Canada, January 2004,
-  https://www.cs.ubc.ca/~lowe/papers/ijcv04.pdf}, SURF\footnote{H. Bay, T.
-  Tuytelaars, L. Van Gool, SURF: Speeded Up Robust Features,  Zurich, 2006,
-  http://www.vision.ee.ethz.ch/~surf/eccv06.pdf}, and FREAK\footnote{A. Alahi,
-  R. Ortiz, P. Vandergheynst, FREAK: Fast Retina Keypoint, Switzerland, 2012,
-http://infoscience.epfl.ch/record/175537/files/2069.pdf}. According to a
-lecture draft\footnote{K. Grauman, B. Leibe, Visual Recognition, 2009,
+According to a lecture draft \footnote{K. Grauman, B. Leibe, Visual
+Recognition, 2009,
 http://www.cs.utexas.edu/~grauman/courses/fall2009/papers/bag\_of\_visual\_words.pdf},
-interest operators (like SIFT, SURF, and FREAK) will provide reasonabily
-distinct descriptors for specific objects. However, dense detectors perform
-better for category-level tasks. Recall that we've stated that we are
-interested in detecting objects. However, we are detecting them for the purpose
-of categorization. Therefore, we tested the above descriptor extractors using
-both their corresponding keypoint detectors as well as a general dense keypoint
-detector (as implemented by OpenCV).
+keypoint detectors (like SIFT) will provide reasonably distinct descriptors for
+specific objects. However, dense detectors perform better for category-level
+tasks. Recall that we've stated that we are interested in detecting objects.
+However, we are detecting them for the purpose of categorization. We first
+experimented with the SIFT detector and found promising results. We then
+experimented with the Dense detector (using SIFT descriptors) and found similar
+results. It appears that the detector is not too important in categorization
+for our dataset.
 
 The choice of cluster sizes was fairly experimental. A larger vocabulary gives
 you more power, but also increase the risk of overfitting. Similarly, a smaller
 vocabulary gives you generalization but may be too weak. We started with a
 vocabulary of size $300$. We saw that we were able to capture similar views of
-the same scene consistently, but were sometimes unable to capture very similar
+the same scene consistently, but were often unable to capture very similar
 scenes. See figure $\ref{Fig:SameScene}$ for an example of us detecting the
 same scene from different viewpoints. Therefore, we believed we may be
 overfitting and so we reduced the vocabulary size to $150$.  Now we see that we
-are capturing similar concepts.  See figure $\ref{Fig:HighlightedAnimals}$ for
-an example.  The number of webcam categories experiences similar behavior. We
+are capturing similar concepts as well as different views on the same scene.
+See figure $\ref{Fig:HighlightedAnimals}$ for an example of this increased
+generality. The number of webcam categories experiences similar behavior. We
 wish for the categories to be meaningful (implying more categories) but also
 easily distinguishable (implying fewer categories). In example above, we saw
 that we had a meaningful cluster (animals) but also had some other webcams with
-it.  This example used $20$ categories. Therefore, we concluded that having
-more clusters may be beneficial, and so increased the number of categories to
-$50$.
+it. This example used $20$ categories. Therefore, we concluded that having more
+clusters may be beneficial, and so increased the number of categories to $50$.
 
 
 For the clustering algorithm itself, we decided to use k-means. This is perhaps
 the most popular clustering algorithm and was chosen due to its simplicity,
 reasonable runtime, and tendency to produce good results. We experimented with
 both random initial clusters and using k-means++ to choose initial clusters,
-and found that k-means++ produced significantly better clusters.
-\textcolor{red}{TODO(seanrafferty): Experiment with different number of runs of
-k-means.}.
+and found that k-means++ produced significantly better clusters. We found
+that running k-means multiple times did not provide any signficant change in
+our clusterings.
 
 We have a few ideas for improving this algorithm. First, we could preprocess
-the images. In this stage, we could ensure that all images are roughly the same
-size. Furthermore, we may be able to achieve similar results much faster by
-reducing the size of our images. Furthermore, we believe we can improve
-performance by only using frames which are well-lit (taken in the afternoon) in
+the images in order to increase uniformity and decrease the run-time (at the
+possible expense of accuracy). Furthermore, we believe we can improve
+performance by only using frames which are well-lit (taken in daylight) in
 this algorithm. We are interested in clustering webcams, not frames, and we
 believe that well-lit webcams are more representative of the interesting
 features associated with the webcam. Furthermore, most webcams look similar at
 night (either bright lights or a completely black screen), and are therefore
 just noise added to the system. Therefore, we believe it is possible to improve
-results significantly by only using frames taken during the day.
-
+results significantly by only using frames taken during the day. Furthermore, there
+is room to tune hyperparameters in hopes of achieving better clusters.
 
 
 \section{Background Subtraction and Activity Detection}
@@ -230,30 +225,29 @@ highlight a webcam only when we observe sustained activity over a pre-defined
 duration of time. 
 
 \section{Further Work}
-In light of the results of our two efforts, we will begin work on labeling
-moving objects. Since the results of activity detection are promising, we can
-extract moving objects from frames by extracting a small patch containing the
-object. Then, we can feed these small patches to an image classifier which will
-label the object (e.g. ``vehicle'', ``human'', ``animal'', etc.). Experimenting
-with different classifiers will be the most challenging part of this extension.
-We will begin with two main approaches. First, we will use the same
-Bag-of-Features model that we used in clustering.  Second, we will use a
-convolutional neural network. Since we are only interested in moving objects,
-our target space is greatly reduced. We do not foresee any need to detect more
-than five (and certainly no more than ten) different classes of objects. To
+In light of the positive results of our two efforts, we will begin work on
+labeling moving objects. First, we will extract small patches containing moving
+objects. Then, we can feed these small patches to an image classifier which
+will label the object. Experimenting with different classifiers will be the
+most challenging part of this extension.  We will begin with two main
+approaches.  First, we will use the same Bag-of-Features model that we used in
+clustering.  Second, we will use a convolutional neural network. Since we are
+only interested in moving objects, our label-space is greatly reduced. We do
+not foresee any need to detect more than five (and certainly no more than ten)
+different classes of objects (e.g. ``vehicle'', ``human'', ``animal''). To
 train these models, we will use another labeled dataset containing objects we
-are interested in detecting, as well as negative examples. As a sepcialization
-to our task, we plan to focus on images that are observed by our motion
-detector to have a high false-positive rate (e.g. clouds, water, etc.).
-
-We believe this extension will provide many benefits to our original goal:
-finding interesting and similar webcams. First, knowing the density of moving
-objects in each webcam enables another method of clustering which has strong
-semantic power. Similarly, users can search through webcams to find objects
-they are interested in. Additionally, having a classifier that can provide
-strong negative classifications (i.e. there are no interesting objects in the
-given patch) can help reduce the number of false positives reported by the
+are interested in detecting as well as negative examples. We plan to focus on
+negative examples which are observed to have a high false-positive rate by our
 motion detector.
+
+
+We believe this extension will provide many benefits to our original goal of
+finding interesting and similar webcams. First, knowing the density of moving
+objects in each webcam enables us to cluster on semantics more directly.
+Similarly, users could then search through webcams to find objects they are
+interested in. Additionally, having a classifier that provides strong negative
+classifications (i.e. there are no interesting objects in the given patch) can
+help reduce the number of false positives reported by the motion detector.
 
 \newpage
 

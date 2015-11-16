@@ -47,7 +47,9 @@ std::vector<cv::Mat> DescriptorExtractor::extract(
   std::vector<std::vector<cv::KeyPoint>> all_keypoints;
   std::vector<cv::Mat> all_descriptors;
 
+
   detector_->detect(images, all_keypoints);
+
 
   if (max_descriptors) {
     for (auto& keypoints : all_keypoints) {
@@ -102,14 +104,14 @@ cv::Mat DescriptorExtractor::extract_representative(
     uniform_random_subset.push_back(random_selector(frames));
   }
 
+
   // Extract the descriptors from the subset of frames.
-  std::cout << "extract descriptors" << std::endl;
   std::vector<cv::Mat> descriptors{extract(uniform_random_subset,
       kMaxDescriptorsPerFrame)};
 
+
   // Compute the median number of descriptors found. This will be the the
   // number of representative descriptors we will return.
-  std::cout << "compute statistics" << std::endl;
   std::vector<size_t> descriptor_counts{};
   for (const auto& descriptor : descriptors) {
     descriptor_counts.push_back(descriptor.size().height);
@@ -119,6 +121,7 @@ cv::Mat DescriptorExtractor::extract_representative(
   sort(descriptor_counts.begin(), descriptor_counts.end());
   size_t median_descriptor_count{
       descriptor_counts[descriptor_counts.size() / 2]};
+
 
   // Combine the descriptors into a single matrix.
   cv::Mat all_descriptors{};

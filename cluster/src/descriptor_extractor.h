@@ -36,10 +36,10 @@ public:
   //   "BRISK"       BRISK
   //   "ORB"         ORB
   //   "FREAK"       FREAK
-  DescriptorExtractor(const std::string& descriptor_type,
-      const std::string& detector_type)
-  : extractor_{cv::DescriptorExtractor::create(descriptor_type)},
-    detector_{cv::FeatureDetector::create(detector_type)} {}
+  DescriptorExtractor(const std::string& detector_type,
+      const std::string& descriptor_type)
+  : detector_{cv::FeatureDetector::create(detector_type)},
+    extractor_{cv::DescriptorExtractor::create(descriptor_type)} {}
 
   // Extract descriptors from the given image(s).
   cv::Mat extract(const cv::Mat& image, size_t max_descriptors = 0) const;
@@ -58,8 +58,8 @@ public:
 private:
   static void SortKeypoints(std::vector<cv::KeyPoint>& keypoints);
 
-  cv::Ptr<cv::DescriptorExtractor> extractor_;
   cv::Ptr<cv::FeatureDetector> detector_;
+  cv::Ptr<cv::DescriptorExtractor> extractor_;
 };
 
 

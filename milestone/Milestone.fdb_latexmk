@@ -1,5 +1,5 @@
 # Fdb version 3
-["pdflatex"] 1447631017 "Milestone.tex" "Milestone.pdf" "Milestone" 1447631018
+["pdflatex"] 1447640659 "Milestone.tex" "Milestone.pdf" "Milestone" 1447640660
   "./BackgroundSubtraction1.PNG" 1447560334 783459 3a40385ce9bfb5dbe06d3c1448c19234 ""
   "./HighlightedAnimals.PNG" 1447629214 2810651 0b2c0cfc4469db58587f14e74bffa32c ""
   "./LightingConditions.PNG" 1447560334 589661 27f3dace971b46565c7ed6a1b9aea5ee ""
@@ -75,10 +75,10 @@
   "BackgroundSubtraction1.PNG" 1447560334 783459 3a40385ce9bfb5dbe06d3c1448c19234 ""
   "HighlightedAnimals.PNG" 1447629214 2810651 0b2c0cfc4469db58587f14e74bffa32c ""
   "LightingConditions.PNG" 1447560334 589661 27f3dace971b46565c7ed6a1b9aea5ee ""
-  "Milestone.aux" 1447631018 1578 a121ca57f8b068eb2b135b06a75c878b ""
-  "Milestone.tex" 1447631017 17333 5382c0ffaff10fe602842b90d0d645a3 ""
+  "Milestone.aux" 1447640660 1578 a121ca57f8b068eb2b135b06a75c878b ""
+  "Milestone.tex" 1447640655 16861 95dd173a88e0d6177ecd37fc0452ee93 ""
   "SameScene.PNG" 1447630441 1996711 28cb4f9f07a53669b3b82ce9960ecfc0 ""
   (generated)
-  "Milestone.log"
-  "Milestone.aux"
   "Milestone.pdf"
+  "Milestone.aux"
+  "Milestone.log"
