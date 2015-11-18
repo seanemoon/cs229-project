@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+
 // The maximum number of descriptors to visualize.
 const static int kMaxDescriptorsToShow {200};
 
