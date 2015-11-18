@@ -7,44 +7,61 @@
 #include <mutex>
 #include <queue>
 #include <thread>
-#include <unordered_map>
 #include <vector>
 
 #include "frames_manager.h"
 #include "descriptor_extractor.h"
+#include "cache.h"
+#include "types.h"
+
+
+using namespace wc;
 
 
 // HYPERPARMATERS.
-
-// The keypoint detector to use.
+// Keypoint detector and descriptor extractor.
 const static char* kKeypointDetector = "Dense";
-// The keypoint descriptor to use.
 const static char* kKeypointDescriptor = "SIFT";
 
-// Number of words in the bag-of-features representation.
+// Clustering parameters for generating the vocabulary.
 const static size_t kVocabSize{200};
-// Number of times to run k-means when generating the vocabulary.
 const static size_t kNumVocabAttempts{20};
 
-// Number of image categories.
+// Clustering parameters for generating the webcam categories.
 const static int kNumClusters{100};
-// Number of times to run k-means when clustering images.
 const static size_t kNumClusterAttempts{20};
 
+// Sampling parameters for extracting a representative set of descriptors from
+// a webcam.
+const static size_t kNumFramesPerWebcam {10};
+const static size_t kMaxDescriptorsPerFrame {100};
 
 
-// Threading.
-// Some keypoint detector/descriptors are implemented to be multithreaded. In
-// this case, we should only use one thread.
+
+// THREADING
+// We may desire a varying number of threads depending on how OpenCV implements
+// library calls. For instance, k-means is implemented with multiple threads
+// under OpenCV. Therefore, we will just cause congestion when trying to
+// optimize for multiple cores.
+// Furthermore, we may or may not want to call multithreaded code in the same
+// section (extracting descriptors, computing features, etc.) as our methods
+// are still highly experimental. In other words, during certain experiments we
+// may want the descriptor extraction step to be multithreaded, while in other
+// experiments we may find multithreading to be deleterious for descriptor
+// extraction.
 const static size_t kNumThreadsExtractDescriptors {12};
-// Computing features is done by hand, so multithreading can increase
-// throughput.
 const static size_t kNumThreadsComputeFeatures {12};
+
+// We currently have one global lock for all possible critical sections.
+// Although this is sufficient for our current experiments, we may wish to
+// change this later if we make more complex use of multithreading.
 std::mutex g_mtx;
+
+// This is the dispatch queue that the producer thread(s) (generally just one)
+// use to communicate to the consumer thread(s) (generally many).
 std::queue<std::string> g_queue;
 
-
-// Threading helper functions.
+// Helper function to atomically retrieve an element from the queue.
 std::string atomic_pop() {
   std::string item{};
   std::lock_guard<std::mutex> guard(g_mtx);
@@ -55,27 +72,16 @@ std::string atomic_pop() {
   return item;
 }
 
-
+// Helper function to atomically add an element to the queue.
 void atomic_push(const std::string& item) {
   std::lock_guard<std::mutex> guard(g_mtx);
   g_queue.push(item);
 }
 
 
-// Helpful definitions.
-using DescriptorsMap = std::unordered_map<std::string, cv::Mat>;
-using FeaturesMap = std::unordered_map<std::string, cv::Mat>;
-using ClustersMap = std::unordered_map<std::string, cv::Mat>;
 
-
-const std::string kDescriptorsDir{"descriptors"};
-const std::string kFeaturesDir{"features"};
-const std::string kVocabularyDir{"vocabulary"};
-const std::string kClustersDir{"clusters"};
-const std::string kClustersVisDir{"clusters_vis"};
-
-
-// Quick and dirty profiling.
+// PROFILING
+// Quick and dirty.
 void print_current_time() {
   auto now = std::chrono::system_clock::now();
   auto now_c = std::chrono::system_clock::to_time_t(now);
@@ -83,54 +89,10 @@ void print_current_time() {
 }
 
 
-// Load and store helper functions.
-cv::Mat load_mat(const std::string& dir, const std::string& leaf) {
-  cv::Mat mat;
-  cv::FileStorage file(dir + "/" + leaf + ".yml", cv::FileStorage::READ);
-  file[leaf] >> mat;
-  return mat;
-}
-
-
-void store_mat(const std::string& dir, const std::string& leaf,
-    const cv::Mat& mat) {
-  cv::FileStorage file(dir + "/" + leaf + ".yml", cv::FileStorage::WRITE);
-  file << leaf << mat;
-}
-
-
-DescriptorsMap load_descriptors(const std::vector<std::string>& ids) {
-  DescriptorsMap map;
-  cv::Mat mat;
-  for (const auto& id : ids) {
-    mat = load_mat(kDescriptorsDir, id);
-    if (mat.data) {
-      map[id] = mat;
-    }
-  }
-  return map;
-}
-
-
-FeaturesMap load_features(const std::vector<std::string>& ids) {
-  FeaturesMap map;
-  cv::Mat mat;
-  for (const auto& id : ids) {
-    mat = load_mat(kFeaturesDir, id);
-    if (mat.data) {
-      map[id] = mat;
-    }
-  }
-  return map;
-}
-
-
-cv::Mat load_vocabulary() {
-  return load_mat(kVocabularyDir, "vocabulary");
-}
-
-
-// Main helper functions.
+// MAIN HELPER FUNCTIONS
+// A worker function that detects keypoints and extracts descriptors for a
+// webcam. This worker persists its results using the cache. This worker runs
+// as long as there are requests on the `g_queue`.
 void extract_descriptors_fn(const wc::FramesManager& frames_manager) {
   const wc::DescriptorExtractor descriptor_extractor{kKeypointDetector,
       kKeypointDescriptor};
@@ -140,22 +102,23 @@ void extract_descriptors_fn(const wc::FramesManager& frames_manager) {
     if (id.empty()) {
       return;
     }
-    std::cout << id << std::endl;
 
     std::vector<cv::Mat> frames{frames_manager.GetFrames(id)};
-    // TODO(seanrafferty): Pass hyperparams here.
-    std::cout << "call extract" << std::endl;
-    cv::Mat descriptors = descriptor_extractor.extract_representative(frames);
-    std::cout << "return extract" << std::endl;
+    cv::Mat descriptors = descriptor_extractor.extract_representative(frames,
+        kNumFramesPerWebcam, kMaxDescriptorsPerFrame);
 
     if (descriptors.data) {
-      std::cout << "Storing descriptors." << std::endl;
-      store_mat(kDescriptorsDir, id, descriptors);
+      Cache::store_mat(Cache::kDescriptorsDir, id, descriptors);
     }
   }
 }
 
 
+// Helper function to extract descriptors from all of the webcams. This
+// function delegates work to threads running `extract_descriptors_fn`. It
+// fills the `g_queue` with webcam identifiers and waits on the worker threads
+// to finish. Then, it collects the descriptors and returns the appropriate
+// descriptors map.
 DescriptorsMap extract_descriptors(const wc::FramesManager& frames_manager) {
   std::thread threads[kNumThreadsExtractDescriptors];
   const auto ids = frames_manager.GetWebcamIdentifiers();
@@ -168,10 +131,15 @@ DescriptorsMap extract_descriptors(const wc::FramesManager& frames_manager) {
   for (auto& thread : threads) {
     thread.join();
   }
-  return load_descriptors(ids);
+  return Cache::load_descriptors(ids);
 }
 
 
+// A worker function that generates the vocabulary given a matrix of
+// descriptors, where each row represents a descriptor. There really should
+// only be one thread running the worker function, as it calls `cv::kmeans`,
+// which is itself multithreaded. This function persists its results using the
+// cache.
 void generate_vocabulary_fn(const cv::Mat& all_descriptors) {
   cv::Mat centroids;
   cv::Mat best_labels;
@@ -181,34 +149,31 @@ void generate_vocabulary_fn(const cv::Mat& all_descriptors) {
   const cv::TermCriteria term_criteria(cv::TermCriteria::EPS, 0, epsilon);
   const int flags{cv::KMEANS_PP_CENTERS};
 
-  std::cout << "Descriptors size: " << all_descriptors.size() << std::endl;
-  std::cout << "k: " << std::to_string(num_centroids) << std::endl;
-  std::cout << "descriptors.type() == CV_32F: " 
-      << std::to_string(all_descriptors.type() == CV_32F) << std::endl;
-
-
   cv::kmeans(all_descriptors, num_centroids, best_labels, term_criteria,
       num_attempts, flags, centroids);
 
-  store_mat(kVocabularyDir, "vocabulary", centroids);
+  Cache::store_mat(Cache::kVocabularyDir, "vocabulary", centroids);
 }
 
+
+// Helper function to generate the vocabulary given a map of descriptors.
+// Delegates work to `generate_vocabulary_fn` after converting the map to a
+// matrix where each row contains a descriptor.
 cv::Mat generate_vocabulary(const DescriptorsMap& descriptors_map) {
-  // TODO(seanrafferty): Consider whether we are losing our ordering here. This would
-  // imply that everything we learn is now random.
   cv::Mat all_descriptors;
   for (const auto& pair : descriptors_map) {
     all_descriptors.push_back(pair.second);
   }
-
   all_descriptors.convertTo(all_descriptors, CV_32F);
-
   generate_vocabulary_fn(all_descriptors);
 
-  return load_vocabulary();
+  return Cache::load_vocabulary();
 }
 
 
+// A worker function that computes features for a webcam. This worker persists
+// its results using the cache. This worker runs as long as there are requests
+// on the `g_queue`.
 void compute_features_fn(const DescriptorsMap& descriptors_map,
     const cv::Mat& vocabulary) {
   std::string id;
@@ -221,10 +186,6 @@ void compute_features_fn(const DescriptorsMap& descriptors_map,
     const cv::Mat descriptors = descriptors_map.at(id);
     int num_descriptors = descriptors.size().height;
     int vocabulary_size = vocabulary.size().height;
-
-    std::cout << "num descriptors: " << num_descriptors << std::endl;
-    std::cout << "vocabulary size: " << vocabulary_size << std::endl;
-    std::cout << "vocabulary.size(): " << vocabulary.size() << std::endl;
 
     std::vector<int> histogram(vocabulary_size);
     for (int d{0}; d < num_descriptors; ++d) {
@@ -243,12 +204,17 @@ void compute_features_fn(const DescriptorsMap& descriptors_map,
     cv::Mat features(histogram);
 
     if (features.data) {
-      store_mat(kFeaturesDir, id, features);
+      Cache::store_mat(Cache::kFeaturesDir, id, features);
     }
   }
 }
 
 
+// Helper function to compute the features for all of the webcams.  This
+// function delegates work to threads running `compute_features_fn`. It fills
+// the `g_queue` with webcam identifiers and waits on the worker threads to
+// finish. Then, it collects the features and returns the appropriate features
+// map.
 FeaturesMap compute_features(const DescriptorsMap& descriptors_map,
     const cv::Mat& vocabulary) {
   std::thread threads[kNumThreadsComputeFeatures];
@@ -264,13 +230,14 @@ FeaturesMap compute_features(const DescriptorsMap& descriptors_map,
     thread.join();
   }
 
-  return load_features(ids);
+  return Cache::load_features(ids);
 }
 
 
+// Performs the clustering on the features. This function uses OpenCV's k-means
+// implementation to perform the clustering. Returns the appropriate cluster
+// map.
 ClustersMap cluster(const FeaturesMap& features_map, int num_clusters) {
-  std::cout << features_map.size() << std::endl;
-
   std::vector<std::string> ids;
   cv::Mat row;
   cv::Mat all_features;
@@ -279,8 +246,6 @@ ClustersMap cluster(const FeaturesMap& features_map, int num_clusters) {
     all_features.push_back(row);
     ids.push_back(pair.first);
   }
-
-  std::cout << ids.size() << std::endl;
 
   cv::Mat centroids;
   cv::Mat best_labels;
@@ -291,11 +256,6 @@ ClustersMap cluster(const FeaturesMap& features_map, int num_clusters) {
   const int flags{cv::KMEANS_PP_CENTERS};
 
   all_features.convertTo(all_features, CV_32F);
-  std::cout << all_features.size() << std::endl;
-  std::cout << all_features.type() << std::endl;
-  std::cout << CV_32F << std::endl;
-  std::cout << num_centroids << std::endl;
-
   cv::kmeans(all_features, num_centroids, best_labels, term_criteria,
       num_attempts, flags, centroids);
 
@@ -304,13 +264,40 @@ ClustersMap cluster(const FeaturesMap& features_map, int num_clusters) {
     cv::Mat label {};
     std::string id {ids[i]};
     label.push_back(best_labels.at<int>(i));
-    store_mat(kClustersDir, id, label); 
+    Cache::store_mat(Cache::kClustersDir, id, label); 
     cluster_map[id] = label;
   }
 
   return cluster_map;
 }
 
+
+// Clusters webcams semantically based on the content of their frames.
+//
+// Most of the work is in extracting meaningful features. We elect to use a
+// Bag-of-Featrues model, where each webcam is represented as a histogram of
+// descriptors. To create this histogram, we first sample representative frames
+// from each webcam (currently just a uniform random sampling) and compute
+// their descriptors. We then cluster all of these descriptors into a visual
+// vocabulary of fixed size. Then, given a webcam, we create a histogram of the
+// closest descriptors in the visual vocabulary to descriptors in the sample of
+// representative frames. These histograms are then our features that we use in
+// clustering the webcams.
+//
+// Clustering itself is very straightforward. We just use k-means to cluster
+// the webcams into a fixed number of categories.
+//
+// This program checkpoints its work as it proceeds. Each step is fairly time
+// consuming, so checkpointing helps us speed up experiments in case we want to
+// change some component. When run, this program begins at the step
+// corresponding to the first empty checkpoint directory. Therefore, you can
+// delete the contents of certain checkpoint directories to influence where the
+// program starts. See `cache.{h, cc}` for details.
+//
+// In addition to producing cluster assignments, this program will also output
+// a small visualization of the produced clusterings. More concretely, this
+// program will create a directory for each cluster, and will then place a frame
+// for each webcam assigned to that cluster within the directory.
 int main(int argc, char** argv) {
   if (argc < 2 || argc > 3) {
     std::cout << "USAGE: ./COMPLETE <frames_dir> [num_clusters]" << std::endl;
@@ -327,14 +314,14 @@ int main(int argc, char** argv) {
 
   print_current_time();
   std::cout << "Attempting to load features..." << std::endl;
-  FeaturesMap features_map{load_features(ids)};
+  FeaturesMap features_map{Cache::load_features(ids)};
   if (features_map.empty()) {
     std::cout << "Features not found." << std::endl;
 
     // Extract descriptors.
     print_current_time();
     std::cout << "Attempting to load descriptors..." << std::endl;
-    DescriptorsMap descriptors_map{load_descriptors(ids)};
+    DescriptorsMap descriptors_map{Cache::load_descriptors(ids)};
     if (descriptors_map.empty()) {
       std::cout << "Descriptors not found." << std::endl;
       std::cout << "Extracting descriptors." << std::endl;
@@ -346,7 +333,7 @@ int main(int argc, char** argv) {
     // Generate vocabulary.
     print_current_time();
     std::cout << "Attemping to load vocabulary..." << std::endl;
-    cv::Mat vocabulary = load_vocabulary();
+    cv::Mat vocabulary = Cache::load_vocabulary();
     if (!vocabulary.data) {
       std::cout << "Vocabulary not found." << std::endl;
       std::cout << "Generating vocabulary." << std::endl;
@@ -372,55 +359,10 @@ int main(int argc, char** argv) {
     cv::Mat sample = frames_manager.GetFirstFrame(pair.first);
     int label = pair.second.at<int>(0);
     if (sample.data) {
-      cv::imwrite(kClustersVisDir + "/" + std::to_string(label) + "/" + pair.first + ".jpg", sample);
+      cv::imwrite(Cache::kClustersVisDir + "/" + std::to_string(label) + "/" +
+          pair.first + ".jpg", sample);
     }
   }
 
   return 0;
 }
-
-
-/*
-int main(int argc, char** argv) {
-  if (argc != 2) {
-    std::cout << "USAGE: ./COMPLETE <frames_dir>" << std::endl;
-    exit(2);
-  }
-
-  const wc::FramesManager frames_manager{argv[1]};
-  std::vector<std::string> ids {frames_manager.GetWebcamIdentifiers()};
-
-  print_current_time();
-  DescriptorsMap descriptors_map{load_descriptors(ids)};
-  if (descriptors_map.empty()) {
-    std::cout << "Extracting descriptors." << std::endl;
-    descriptors_map = extract_descriptors(frames_manager);
-  } else { 
-    std::cout << "Using cached descriptors." << std::endl;
-  }
-
-  print_current_time();
-  cv::Mat vocabulary = load_vocabulary();
-  if (!vocabulary.data) {
-    std::cout << "Generating vocabulary." << std::endl;
-    vocabulary = generate_vocabulary(descriptors_map);
-  } else {
-    std::cout << "Using cached vocabulary." << std::endl;
-  }
-
-  print_current_time();
-  FeaturesMap features_map{load_features(ids)};
-  if (features_map.empty()) {
-    std::cout << "Computing features." << std::endl;
-    FeaturesMap features_map{compute_features(descriptors_map, vocabulary)};
-  } else {
-    std::cout << "Using cached features." << std::endl;
-  }
-
-  print_current_time();
-  std::cout << "Clustering images." << std::endl;
-  ClustersMap cluster_map{cluster(features_map)};
-
-  return 0;
-}
-*/

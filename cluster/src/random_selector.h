@@ -1,4 +1,5 @@
 // Adapted from https://gist.github.com/cbsmith/5538174.
+
 #ifndef WC_RANDOM_SELECTOR_H_
 #define WC_RANDOM_SELECTOR_H_
 
