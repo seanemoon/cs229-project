@@ -33,8 +33,8 @@ const static size_t kNumClusterAttempts{20};
 
 // Sampling parameters for extracting a representative set of descriptors from
 // a webcam.
-const static size_t kNumFramesPerWebcam {10};
-const static size_t kMaxDescriptorsPerFrame {100};
+const static size_t kNumFramesPerWebcam{10};
+const static size_t kMaxDescriptorsPerFrame{100};
 
 
 
@@ -49,8 +49,8 @@ const static size_t kMaxDescriptorsPerFrame {100};
 // may want the descriptor extraction step to be multithreaded, while in other
 // experiments we may find multithreading to be deleterious for descriptor
 // extraction.
-const static size_t kNumThreadsExtractDescriptors {12};
-const static size_t kNumThreadsComputeFeatures {12};
+const static size_t kNumThreadsExtractDescriptors{12};
+const static size_t kNumThreadsComputeFeatures{12};
 
 // We currently have one global lock for all possible critical sections.
 // Although this is sufficient for our current experiments, we may wish to
@@ -87,6 +87,7 @@ void print_current_time() {
   auto now_c = std::chrono::system_clock::to_time_t(now);
   std::cout << std::put_time(std::localtime(&now_c), "%c") << std::endl;
 }
+
 
 
 // MAIN HELPER FUNCTIONS
