@@ -66,12 +66,16 @@ public:
   void visualize_keypoints(const std::vector<cv::Mat>& images,
       const std::string& out_dir, size_t max_keypoints = 0) const;
 
+  // Extract representative descriptors from the given frames. Returns a maximum
+  // of `max_descriptors_per_frame` * `num_frames_per_webcam` descriptors as the
+  // rows of the returned matrix. The given frames comprise a webcam.
   cv::Mat extract_representative(const std::vector<cv::Mat>& frames,
       int num_frames_per_webcam, int max_descriptors_per_frame) const;
 
 
 
 private:
+  // Sorts keypoints in ascending order of their responses.
   static void SortKeypoints(std::vector<cv::KeyPoint>& keypoints);
 
   cv::Ptr<cv::FeatureDetector> detector_;
