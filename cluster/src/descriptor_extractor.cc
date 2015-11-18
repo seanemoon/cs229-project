@@ -17,7 +17,7 @@ namespace wc {
 
 
 void DescriptorExtractor::SortKeypoints(std::vector<cv::KeyPoint>& keypoints) {
-  // Sort hte keypoints by their responses.
+  // Sort the keypoints by their responses.
   std::sort(keypoints.begin(), keypoints.end(), 
       [](const cv::KeyPoint &a, const cv::KeyPoint &b) -> bool {
         return a.response < b.response;
