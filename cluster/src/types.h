@@ -1,9 +1,6 @@
 #ifndef WC_TYPES_H_
 #define WC_TYPES_H_
 
-// Provides more readable type definitions.
-
-
 #include <unordered_map>
 
 
