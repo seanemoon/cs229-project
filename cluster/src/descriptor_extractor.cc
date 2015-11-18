@@ -99,7 +99,8 @@ void DescriptorExtractor::visualize_keypoints(
 }
 
 cv::Mat DescriptorExtractor::extract_representative(
-    const std::vector<cv::Mat>& frames, int num_frames_per_webcam, int max_descriptors_per_frame) const {
+    const std::vector<cv::Mat>& frames, int num_frames_per_webcam,
+        int max_descriptors_per_frame) const {
   // Degenerate webcam.
   if (frames.size() < num_frames_per_webcam) {
     return cv::Mat{};
