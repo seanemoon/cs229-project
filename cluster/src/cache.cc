@@ -4,7 +4,9 @@
 
 #include "types.h"
 
+
 namespace wc {
+
 
 const std::string Cache::kDescriptorsDir{"descriptors"};
 const std::string Cache::kFeaturesDir{"features"};
