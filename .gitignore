@@ -69,11 +69,15 @@ webcam/metadata/metadata.p
 *.log
 
 # Build directory:
-cluster/build/
+cluster/build/*
 
 # Resources for testing:
 cluster/res/
 
-analysis/
+analysis/clusters
+analysis/clusters_vis
+analysis/descriptors
+analysis/features
+analysis/vocabulary
 
 experiments/
