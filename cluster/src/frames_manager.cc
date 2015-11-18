@@ -51,6 +51,7 @@ std::vector<cv::Mat> FramesManager::GetFrames(
   return frames;
 }
 
+
 cv::Mat FramesManager::GetFirstFrame(
     const std::string& webcam_identifier) const {
   using boost::filesystem::directory_iterator;
@@ -66,5 +67,6 @@ cv::Mat FramesManager::GetFirstFrame(
   
   return cv::Mat{};
 }
+
 
 }  // namespace wc
