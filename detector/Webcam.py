@@ -1,18 +1,18 @@
 ##### Webcam Object for object detection and tracking #####
 ### Class constructor ###
-# Webcam(online,path,resize = None,BSHistory = 500, BSThreshold = 16, minBlobAreaRatio = 0.0002, maxBlobAreaRatio = 0.2) 
+# Webcam(online,path,resize = None,BSHistory = 50, BSThreshold = 15, minBlobAreaRatio = 0.0003, maxBlobAreaRatio = 0.2) 
 # ----- Arguments -----
 # online (required)          : input True if image source is an online webcam, input False if image source is images in a folder
 # path   (required)          : query URL if image source is an online webcam, image directory path is image source is images in a folder 
 # resize (optional)          : input tuple of (newYresolution, newXresolution) if resizing of image is desired. By default, no resizing occurs
-# BSHistory (optional)       : Controls how long the background subtractor remembers previous frames for. By default, set to 30
-# BSThreshold (optional)     : Controls the threshold above which the background subtractor classifies a pixel as foreground. By default, set to 10
-# minBlobAreaRatio (optional): Minimum percentage of picture area a blob must be to be classified as foreground. By default, set to 0.0002
-# maxBlobAreaRatio (optional): Maximum percentage of picture area a blob must be to be classified as background. By default, set to 0.2
+# BSHistory (optional)       : Controls how long the background subtractor remembers previous frames for. By default, set to 50
+# BSThreshold (optional)     : Controls the threshold above which the background subtractor classifies a pixel as foreground. By default, set to 15
+# minBlobAreaRatio (optional): Minimum percentage of picture area a blob must be to be classified as foreground. By default, set to 0.0003
+# maxBlobAreaRatio (optional): Maximum percentage of picture area a blob must be to be classified as background. By default, set to 0.15
 #
 ### Instance Methods ###
 # update()                  : Call this function to get a new image from image source and process it. 
-# score()                   : Call this function to get the current image score for the webcam. Currently returns blob area as percentage of total image area
+# score()                   : Call this function to get the current image score for the webcam. 
 # image()                   : Returns most recent image of webcam (in the form of a numpy array)
 # overlaidImage()           : Returns most recent image of webcam overlaid with object detection contours and bounding boxes
 # foreground()              : Returns binary foreground mask of webcam from background detector
@@ -25,12 +25,14 @@
 import cv2
 import numpy as np
 import time
+import urllib2
+import httplib
 from socket import timeout
 from skimage import io
 import os
 
 class Webcam:
-	def __init__(self,online, path ,resize = None,BSHistory = 30, BSThreshold = 10, minBlobAreaRatio = 0.0002, maxBlobAreaRatio = 0.2):
+	def __init__(self,online, path ,resize = None,BSHistory = 50, BSThreshold = 15, minBlobAreaRatio = 0.0003, maxBlobAreaRatio = 0.15):
 		self.online = online
 		self.backgroundMOG = cv2.createBackgroundSubtractorMOG2(history = BSHistory, varThreshold = BSThreshold, detectShadows = False)
 		self.minBlobRatio = minBlobAreaRatio
@@ -45,7 +47,10 @@ class Webcam:
 
 			try:
 				startTime = time.clock()
-				readImg = cv2.cvtColor(io.imread(self.path),cv2.COLOR_BGR2RGB)
+
+				resource = urllib2.urlopen(self.path,timeout = 10)
+				readImg = cv2.imdecode(np.asarray(bytearray(resource.read()),dtype = "uint8"),cv2.IMREAD_COLOR)
+
 				endTime = time.clock()
 				self.respTime = endTime-startTime
 				self.connected = True
@@ -76,14 +81,15 @@ class Webcam:
 			self.size = resize
 			self.numPixels = self.size[0]*self.size[1]
 			self.img = np.zeros(resize+tuple([3]))
-		else:
+			self.overlaid = self.img
+		elif readImg is not None:
 			self.img = readImg
 			self.size = self.img.shape[0:2]
 			self.numPixels = self.size[0]*self.size[1]
-
-		self.foremask = np.zeros_like(self.img)
-			
+	
+		self.hasImg = False
 		if readImg is not None:
+			self.hasImg = True
 			self.img = cv2.resize(readImg,(self.size[1],self.size[0]))
 			#blurimg = cv2.GaussianBlur(self.img,(5,5),0)
 			self.foremask = self.backgroundMOG.apply(self.img)
@@ -92,7 +98,8 @@ class Webcam:
 		readImg = None
 		if self.online:
 			try:
-				readImg = cv2.cvtColor(io.imread(self.path),cv2.COLOR_BGR2RGB)
+				resource = urllib2.urlopen(self.path,timeout = 10)
+				readImg = cv2.imdecode(np.asarray(bytearray(resource.read()),dtype = "uint8"),cv2.IMREAD_COLOR)
 				self.connected = True
 
 			except urllib2.URLError:
@@ -109,8 +116,9 @@ class Webcam:
 				readImg = cv2.imread(self.path[self.imgIdx],1)
 				self.imgIdx = self.imgIdx+1
 
+		self.hasImg = False
 		if readImg is not None:
-
+			self.hasImg = True
 			self.img = cv2.resize(readImg,(self.size[1],self.size[0]))
 			self.overlaid = np.copy(self.img)
 			#blurimg = cv2.GaussianBlur(self.img,(5,5),0)
@@ -120,13 +128,16 @@ class Webcam:
 			contourCpy = np.copy(self.foremask)
 			self.contours = cv2.findContours(contourCpy,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)[1]
 			self.contourArea = 0.0;
+			self.contourArcLength = 0.0;
+
 			if self.contours:
 				filteredContours = [];
-				for i,contour in enumerate(self.contours):
+				for contour in self.contours:
 					cA = cv2.contourArea(contour)
 
 					if cA > self.minBlobRatio*self.numPixels and cA < self.maxBlobRatio*self.numPixels:
 						self.contourArea = self.contourArea + cA
+						self.contourArcLength = self.contourArcLength + cv2.arcLength(contour,True)
 						filteredContours.append(contour)
 						
 				self.contours = sorted(filteredContours, key = cv2.contourArea, reverse = True)
@@ -138,7 +149,10 @@ class Webcam:
 
 
 	def score(self):
-		return self.contourArea/self.numPixels
+		if self.hasImg and self.contourArcLength!= 0:
+			return self.contourArea*1.0/(self.numPixels*self.contourArcLength)
+		else:
+			return 0
 
 	def image(self):
 		return self.img
