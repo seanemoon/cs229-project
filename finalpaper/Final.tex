@@ -5,6 +5,8 @@
 \usepackage{url}
 \usepackage{graphicx}
 \usepackage{float}
+\usepackage{amsmath, amssymb}
+\usepackage{array}
 
 
 \title{Eyes Around The World - Learning to Alert and Cluster Live Webcams}
@@ -34,9 +36,18 @@ The closest and most relevant previous work that has been conducted is real-time
 Other related work is person identification from webcam images via semi-supervised learning \cite{personidentification}, where facial features are extracted from webcam images to locate track the position of people in those images. Our approach differs from this aspect in that we aim to track multiple kinds of objects instead. Work has also been done in using webcams to detect and monitor birds in the wild \cite{birddetection} using a median filter by defining the background as the median of the previous N frames. Our work uses a different method (model background as Gaussian mixture model) for object detection instead. 
 
 \section{Dataset and Features}
-Our data set consists of images logged from approximately 2000 publicly accessible, non-password-protected webcams, where query urls were scraped from the website opentopia.com \cite{opentopia}. Although we would ideally run our algorithms directly on live webcam streams, the bandwidth required to simultaneously process a meaningful number of webcams was prohibitively high. As a result, we logged images from those 2000 webcams at a 5 minute recording period over a duration of 1 month, and ran our algorithms on that dataset. 
+Our data set consists of images logged from approximately 2000 publicly accessible, non-password-protected webcams, where query urls were scraped from the website opentopia.com \cite{opentopia}. Although we would ideally run our algorithms directly on live webcam streams, the bandwidth required to simultaneously process a meaningful number of webcams was prohibitively high. As a result, we logged images from those 2000 webcams every 5 minutes over a period of 1 week, and ran our algorithms on that dataset. 
 
-The raw webcam images vary greatly in resolution - From as low to 240 x 180 to as high as 2048 x 1536. We log the webcam images in their native resolution for processing flexibility later on, and resize them to smaller resolutions (typically 300 x 300) as input into our system. Sample images from some webcams are shown below :
+The raw webcam images vary greatly in resolution - From as low to 240 x 180 to as high as 2048 x 1536. We log the webcam images in their native resolution for processing flexibility later on, and resize them to smaller resolutions (typically 300 x 300) as input into our system. Sample images from some webcams are shown below:
+
+The features varied for our initial attempts at clustering and in our main
+effort of classification. For clustering, we used a Bag-of-Features model (akin
+to the Bag-of-Words model which is common in language). The seed of these
+features are SIFT descriptors. We will go more in depth about how we generated
+these features in the Methods section. For classification, we used the patches
+of images containing moving objects found through background subtraction as our
+features. These patches were rescaled to 224 x 224 before being passed to the
+network.
 
 \begin{figure}[h]
 \caption{Sample webcam images}
@@ -74,7 +85,63 @@ We use the background model to classify each pixel in the image as either being 
 
 A webcam's score is then calculated as the sum of contour areas as a percentage of the image size divided by the sum of contour arc lengths, Score = total contour area % / total contour length. We maximize for contour area to be able to show the largest / most number of objects after filtering. We minimize for contour length to reward convexity, as we found that large noisy artifacts in the webcam images tended to be highly non-convex in shape. \textcolor{red}{Example pics?}
 
-\textcolor{red}{[SEAN to add methods for clustering + CNN]}
+\subsection{Clustering}
+The most involved operation in clustering our webcams was extracting the
+features. We wanted to capture semantic information about the webcams, and
+therefore needed features which captured semantic information from frames. We
+decided to base our features off of SIFT descriptors \cite{lowe}. These
+descriptors are scale, translation, and rotation invariant. Furthermore, they
+are robust to lighting changes or slight deformation. These properties are
+desirable for our application, as objects will appear under different
+conditions in our webcams. Given an image, one can extract multiple SIFT
+descriptors, each of which corresponds to some local feature of the image. Each
+descriptor is a vector in $\mathbb{R}^{128}$.
+
+With this machinery, we will illustrate a method for extracting features from
+each webcam. First, we generate the \textit{visual vocabulary} by first
+sampling random frames from every webcam and extracting SIFT descriptors, and
+then clustering the descriptors using k-means. The resulting cluster centroids
+are the words in our vocabulary. Then, we compute the feature vectors for each
+webcam by extracting SIFT descriptors fram a random subset of frames from each
+webcam and computing a histogram of the closest vectors in the vocabulary to
+the descriptors we extracted. The resulting histogram is the feature we use to
+represent the webcam.
+
+Finally, we cluster the webcams' corresponding features using k-means using
+initial clusterings chosen by k-means++. In k-means++, each initial cluster
+center is chosen from a weighted distribution over the dataset, where the
+weight corresponding to a certain point is the squared distance between that
+point and the closest initial centroid we have chosen so far. The first initial
+centroid is chosen uniformly at random from all of the points. The resulting
+clusters are the different unlabeled categories for our webcams.
+
+\subsection{Convolutional Neural Network}
+\subsubsection{Network}
+We used modified version of the BLVC Reference CaffeNet, which is a slightly
+modified version of AlexNet \cite{krizhevsky}. This network features around 60
+million parameters and 500,000 neurons. There are five convolutional layers,
+some of which are followed by max-pooling layers, then two fully connected
+layers, and finally a 3-way softmax.  The only difference between our network
+and the BLVC Reference CaffeNet is that our softmax layer produces 3 outputs,
+whereas theres produces 1000.
+\subsubsection{Dataset}
+Our dataset consists of hand-labeled patches from a random subset found using
+our previously described moving object detector. This dataset consists of 9776
+examples total, 142 (1.453\%) of which are humans, 249 (2.547\%) of which are
+vehicles, and 9385 (96.000\%) of which are noise. We separated this into a
+training set and a testing set. The training set consists of 90\% examples
+randomly sampled from each class, and the test set consists the remaining
+examples.
+\subsubsection{Training}
+We fine-tuned the pretrained BLVC Reference CaffeNet on our dataset. The model
+was pretrained on the ILSVRC 2012 dataset by Jeff Donahue. We then fine-tuned
+the model on our dataset, using a base learning rate of 0.001 for the original
+layers and a learning rate of 0.02 for the final softmax layer. We
+trained the network for a few hours using a single 980 TI.
+
+
+
+\textcolor{red}{[SEAN: Add mathematical formulations for clustering and CNN if room]}
 
 \section{Results / Discussion}
 \subsection{Webcam ranking}
@@ -95,6 +162,49 @@ Even though we perform filtering on contours and on the scoring function to try 
 
 \textcolor{red}{[SEAN to add results for clustering + CNN]}
 
+\section{Clustering}
+The results of clustering were lackluster. We found that the number of clusters
+played a large role in the expressiveness of the clusters. Too many clusters
+produced overly noisy clusters. Too few clusters produced overly broad
+clusters. With a moderate number of clusters, we did see some meaningful
+categories. For instance, we produced an animal cluster, which contained images
+of cats and dogs. However, this category was not exclusive. While it contained
+a disproportionately large number of webcams featuring webcams, it also
+contained unrelated webcams. While the clustering did produce some clear
+results, we deemed them to be too noisy for useful categorization.
+
+\section{CNN Filtering}
+Our filtering results were promising. We have three primary interests. First,
+we want to filter out as many noisy detections as possible.  Secondly, since
+there are proportionally few examples of vehicles and humans, a high recall
+percentage was desirable. Third, we wanted to use the convnet for search and
+clustering, so precision was also important. Our CNN produced the following
+results on the held-out test set:
+\begin{center}
+  \begin{tabular}{ | m{5em} | m{5em}| m{5em} | m{9em} | m{13em} | } 
+    \hline
+    Class & Precision & Recall & Percentage of Dataset & Percentage of Filtered Dataset  \\ 
+    \hline
+    Human & 69.2\% & 64.3\% & 1.453\% & 28.7\%  \\ 
+    \hline
+    Vehicle & 73.9\%  & 68.0\% & 2.547\% & 48.6\% \\ 
+    \hline
+    Noise & 97.8\%  &99.1\% & 96.000\% & 22.9\%  \\ 
+    \hline
+  \end{tabular}
+\end{center}
+
+For our applications, these results are extremely useful. High precision and
+recall for objects of interest mean that searching and clustering are possible.
+Although an even higher precision is desirable, our current numbers are still
+high considering the dataset makeup. Furthermore, the filtered dataset only
+contains 22.9\% noise, which is much lower than the original dataset which was
+comprised of 96\% noise. Thus, the top-5 most interesting webcams are
+significantly more likely to contain objects of interest when filtered.
+
+\textcolor{red}{[CONFUSION MATRIX]}
+
+
 \section{Conclusions / Future Work}
 We have demonstrated a system to rank a large number of webcams using an interest metric that is based on the amount of activity that is currently recorded by a webcam. Webcam activity was quantified by the area of contours fit to foreground pixels classified by a Gaussian Mixture Model for the background model, and the interest metric was designed to reward the number, size and convexity of detected objects. 
 
@@ -103,7 +213,7 @@ One of the main bottlenecks to this project was the amount of GPU memory availab
 \textcolor{red}{[SEAN to add future work for CNN]}
 
 
-\begin{thebibliography}{9}
+\begin{thebibliography}{10}
 \bibitem{webcamnetwork}
 Jacobs, Nathan, et al. "The global network of outdoor webcams: properties and applications." Proceedings of the 17th ACM SIGSPATIAL International Conference on Advances in Geographic Information Systems. ACM, 2009.
 
@@ -127,6 +237,15 @@ Zivkovic, Zoran. "Improved adaptive Gaussian mixture model for background subtra
 
 \bibitem{zivkovic2}
 Z.Zivkovic and F.van der Heijden, “Recursive Unsupervised Learning of Finite Mixture Models”, IEEE Trans. on PAMI, vol.26., no.5, 2004.
+
+\bibitem{lowe}
+Lowe, David. "Distinctive Image Features from Scale-Invariant Keypoints". (2004)
+
+\bibitem{krizhevsky}
+Krizhevsky, Alex. "ImageNet Classification with Deep Convolutional Neural Networks." Advances in Neural Information Processing Systems 25 1097-1105. NIPS, 2012.
+
+
+
 
 \end{thebibliography}
 
