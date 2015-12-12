@@ -54,8 +54,6 @@ network.
 \includegraphics[scale = 0.25]{samples}
 \end{figure}
 
-\textcolor{red}{[SEAN to add some elaboration on features extracted for K-means clustering?]}
-
 \section{Methods}
 \subsection{Webcam ranking}
 In order to rank webcams based on the activity of the objects recorded, it is necessary to separate foreground objects from the image background. To do this, we use OpenCV's BackgroundSubtractorMOG2() method to construct a background model for each pixel, and use it to classify pixels as foreground or background. The method implements the algorithm described in a paper by Zivkovic \cite{zivkovic} for background subtraction. The model is a generative model that uses a Gaussian mixture model (GMM) to model the background color distribution for each pixel. 
@@ -160,8 +158,6 @@ Even though we perform filtering on contours and on the scoring function to try 
 \includegraphics[scale = 0.5]{fails}
 \end{figure}
 
-\textcolor{red}{[SEAN to add results for clustering + CNN]}
-
 \section{Clustering}
 The results of clustering were lackluster. We found that the number of clusters
 played a large role in the expressiveness of the clusters. Too many clusters
@@ -202,7 +198,25 @@ contains 22.9\% noise, which is much lower than the original dataset which was
 comprised of 96\% noise. Thus, the top-5 most interesting webcams are
 significantly more likely to contain objects of interest when filtered.
 
-\textcolor{red}{[CONFUSION MATRIX]}
+Our network produced the following confusion matrix:
+\begin{center}
+  \begin{tabular}{ | m{8em} | m{5em}| m{5em} | m{5em} | }
+    \hline
+    & \multicolumn{3}{c|}{\textbf{Correct Label}} \\ 
+    \hline
+    \textbf{Predicted Label} & Human & Vehicle & Noise \\
+    \hline
+    Human & 0.692 & 0.0 & 0.308 \\
+    \hline
+    Vehicle & 0.043 & 0.739 & 0.217 \\
+    \hline
+    Noise & 0.004 & 0.008 & 0.987 \\
+    \hline
+  \end{tabular}
+\end{center}
+The confusion matrix tells us that incorrect predictions on humans and vehicles
+are generally not helpful. That is, incorrect predictions usually lead to
+inclusion of noise rather than an object of interest of another class.
 
 
 \section{Conclusions / Future Work}
@@ -210,7 +224,18 @@ We have demonstrated a system to rank a large number of webcams using an interes
 
 One of the main bottlenecks to this project was the amount of GPU memory available to store webcam images. In order to be able to detect objects reliably, it is necessary to have the resolution of the images be above a certain size. However, the GPU memory required to process each image increases as the image resolution increases. At an image resolution of 300 x 300, we were able to simultaneously process a maximum of 1000 images at a time. Given extra computational resources, we would apply our system to the all 2000 webcams in the dataset.
 
-\textcolor{red}{[SEAN to add future work for CNN]}
+There are a few avenues we can take in the future in regards to the CNN. First,
+we could tweak the criteria for selecting which label to predict based on the
+probabilities output by the network. Doing so could lead to better precision
+and recall, or a better tradeoff between the two. If we were to go down this
+route, I would propose that we shard our dataset so that we could dynamically
+choose training, testing, and validation sets. Doing so would allow us to
+validate the choices of the different hyperparameters. Furthermore, we could
+collect more data as there are relatively few positive examples for both of our
+objects of interest. This would give us better estimates of our metrics as well
+as better generalization. Furthermore, we could support better clustering as
+well as search by using the data filtered and labeled by the convnet.
+
 
 
 \begin{thebibliography}{10}

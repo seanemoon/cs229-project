@@ -42,6 +42,13 @@ def main(args):
   num_labels = {label: 0 for label in K_LABELS}
   num_classified = {label: 0 for label in K_LABELS}
   num_correct = {label: 0 for label in K_LABELS}
+  num_present = {label: 0 for label in K_LABELS}
+
+  confusion = {}
+  for label in K_LABELS:
+    confusion[label] = {}
+    for label2 in K_LABELS:
+      confusion[label][label2] = 0
 
   counter = 0
   for patch, label in labeled_patches:
@@ -54,11 +61,15 @@ def main(args):
       continue
     classification = classify(classifier, patch)
 
+    confusion[classification][label] += 1
+
     print label, classification
     num_labels[label] += 1
     num_classified[classification] += 1
     if label == classification:
       num_correct[classification] += 1
+    if classification != 'noise':
+      num_present[label] += 1
 
 
   print num_correct
@@ -73,6 +84,14 @@ def main(args):
 
   for label in K_LABELS:
     print ("%s\n\tprecision: %f\n\trecall: %f" % (label, precision[label], recall[label]))
+
+  num_present['animal'] = 0
+  total_present = sum(num_present.values())
+  for label in K_LABELS:
+    print "%s filter precentage: %f" % (label, num_present[label]/float(total_present))
+
+  print confusion
+
 
 if __name__ == "__main__":
   args = retrieve_arguments()
